@@ -1,0 +1,115 @@
+name: transient-nerf-blender-${dataset.scene}
+tag: "${dataset.scene}-${dataset.num_views}-views"
+seed: 42
+
+dataset:
+  name: transient_blender
+  scene: ???
+  root_dir: ./load/transient_nerf_synthetic/${dataset.scene}
+  num_views: two
+  gamma: false
+  rfilter_sigma: 0.15
+  sample_as_per_distribution: false
+  img_wh:
+    - 512
+    - 512
+  downsample: false
+  near_plane: 2.0
+  far_plane: 6.0
+  train_split: "train"
+  val_split: "val"
+  test_split: "test"
+  test_no: 2
+  scale_down_photon_factor: 1
+
+model:
+  name: transient-nerf
+  radius: 1.5
+  num_samples_per_ray: 4096
+  train_num_rays: 512
+  max_train_num_rays: 8192
+  grid_prune: true
+  dynamic_ray_sampling: false #Sample dynamically at each step, set to false if OOM
+  batch_image_sampling: true
+  multi_ray_shooting: true #Repeats multiple ray per pixel
+  randomized: true
+  ray_chunk: 8192 #Decrease if OOM during validation/testing, powers of 2 e.g. 16384
+  learned_background: false
+  background_color: black
+  geometry:
+    name: volume-density
+    radius: ${model.radius}
+    feature_dim: 16
+    density_activation: trunc_exp
+    density_bias: -1
+    isosurface:
+      method: mc
+      resolution: 512
+      chunk: 2097152
+      threshold: 50.0
+    xyz_encoding_config:
+      otype: HashGrid
+      n_levels: 16
+      n_features_per_level: 2
+      log2_hashmap_size: 19
+      base_resolution: 16
+      per_level_scale: 1.4472692012786865
+    mlp_network_config:
+      otype: FullyFusedMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 1
+  texture:
+    name: volume-radiance
+    input_feature_dim: ${model.geometry.feature_dim}
+    dir_encoding_config:
+      otype: SphericalHarmonics
+      degree: 4
+    mlp_network_config:
+      otype: FullyFusedMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 2
+    color_activation: exp
+
+system:
+  name: transient-nerf-system
+  loss:
+    lambda_rgb: 1.
+    lambda_distortion: 0.
+    lambda_space_carving: 7.e-3
+  optimizer:
+    name: AdamW
+    args:
+      lr: 1.e-3 #NOTE: Do not change this
+      betas: [0.9, 0.99]
+      eps: 1.e-15
+  scheduler:
+    name: MultiStepLR
+    interval: step
+    args:
+      #NOTE: These milestones should be dynamically modified if trainer.max_steps were to change
+      milestones: [125000, 187500, 225000]
+      gamma: 0.33
+
+checkpoint:
+  save_top_k: -1
+  every_n_train_steps: 10000
+
+export:
+  chunk_size: 2097152
+  export_vertex_color: False
+  ref_mesh_path: /scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/transient_nerf_synthetic/${dataset.scene}/${dataset.scene}.obj
+  num_samples: 2500000
+
+trainer:
+  max_steps: 250000
+  log_every_n_steps: 100
+  num_sanity_val_steps: 0
+  val_check_interval: 3000 #NOTE: Set val check interval > max steps when val dies
+  limit_train_batches: 1.0
+  limit_val_batches: 2
+  enable_progress_bar: true
+  precision: 16

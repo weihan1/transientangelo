@@ -1,0 +1,214 @@
+name: neuralangelo-baseline-blender-${dataset.scene}
+tag: "${dataset.scene}-${dataset.num_views}-views"
+seed: 42
+
+dataset:
+  name: baseline-blender
+  scene: ???
+  root_dir: ./load/transient_nerf_synthetic/${dataset.scene}
+  num_views: two
+  gamma: false
+  rfilter_sigma: 0.15
+  sample_as_per_distribution: false
+  img_wh:
+    - 512
+    - 512
+  downsample: false
+  near_plane: 2.0
+  far_plane: 6.0
+  train_split: "train"
+  val_split: "val"
+  test_split: "test"
+  test_no: 2
+  scale_down_photon_factor: 1
+  use_mask: false
+  use_gt_depth_normal: false
+
+model:
+  name: baseline-neus
+  radius: 1.5 
+  num_samples_per_ray: 4096
+  train_num_rays: 512
+  max_train_num_rays: 8192
+  grid_prune: true
+  grid_prune_occ_thre: 0.001
+  multi_ray_shooting: false #NOTE: set this to false for fast training
+  dynamic_ray_sampling: false
+  batch_image_sampling: true
+  use_reg_nerf: false
+  train_patch_size: 8 #Only used if regnerf is used - patch size is the length of the side of the square patch, NOT the number of pixels
+  sparse_rays_size: 0 #Only used if regnerf is used - number of sparse rays that we sample from the unknown poses
+  bounding_form: box #only used if regnerf is used - sphere or cube
+  sample_boundary: true #only used if regnerf is used - sample rays from the boundary or including the interior
+  write_poses: false
+  use_depth_variance_weight: false
+  randomized: true
+  ray_chunk: 1024
+  cos_anneal_end: ${trainer.max_steps}
+  learned_background: false 
+  background_color: black
+  variance:
+    init_val: 0.3
+    modulate: false
+  geometry:
+    name: volume-sdf
+    radius: ${model.radius}
+    feature_dim: 16
+    grad_type: finite_difference
+    finite_difference_eps: progressive
+    isosurface:
+      method: mc
+      resolution: 512
+      chunk: 2097152
+      threshold: 0.
+    xyz_encoding_config:
+      otype: ProgressiveBandHashGrid
+      n_levels: 16 #Total Number of levels in the hashgrid (different voxel grid resolutions), we should reach here at the end
+      n_features_per_level: 2 #Number of features per voxel at each level
+      log2_hashmap_size: 19 #2^19 voxels stored at each level in the hashmap
+      base_resolution: 32 #Base resolution of the voxel grid
+      per_level_scale: 1.3195079107728942 #growth factor 
+      include_xyz: true #Concatenating the x itself as a feature
+      start_level: 4 #starting level of the hashgrid (masking 16-4 levels in the beginning)
+      start_step: 0
+      update_steps: 5000
+    mlp_network_config:
+      otype: VanillaMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 1
+      sphere_init: true
+      sphere_init_radius: 0.5 
+      weight_norm: true
+  
+  texture:
+    name: volume-radiance
+    input_feature_dim: ${add:${model.geometry.feature_dim},3} # surface normal as additional input
+    dir_encoding_config:  
+      otype: SphericalHarmonics
+      degree: 4
+    mlp_network_config:
+      otype: FullyFusedMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 2
+    color_activation: Sigmoid
+    
+  num_samples_per_ray_bg: 64
+  geometry_bg:
+    name: volume-density
+    radius: ${model.radius}
+    feature_dim: 8
+    density_activation: trunc_exp
+    density_bias: -1
+    isosurface: null
+    xyz_encoding_config:
+      otype: HashGrid
+      n_levels: 16
+      n_features_per_level: 2
+      log2_hashmap_size: 19
+      base_resolution: 32
+      per_level_scale: 1.3195079107728942
+    mlp_network_config:
+      otype: VanillaMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 1
+  texture_bg:
+    name: volume-radiance
+    input_feature_dim: ${model.geometry_bg.feature_dim}
+    dir_encoding_config:
+      otype: SphericalHarmonics
+      degree: 4
+    mlp_network_config:
+      otype: VanillaMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 2
+    color_activation: Sigmoid
+
+system:
+  name: baseline-neus-system
+  loss:
+    lambda_rgb_mse: 1.
+    lambda_rgb_l1: 0.
+    lambda_space_carving: 0.0
+    lambda_mask: 0.0 
+    lambda_eikonal: 1.e-1
+    lambda_depth_consistency: 0.0
+    lambda_normal_consistency: 0.0
+    lambda_weighted_eikonal: 0.0
+    lambda_eikonal_patch: 0.0
+    lambda_background_regularization: 0.0
+    lambda_surface: 0.0
+    lambda_normal: 0.0
+    lambda_curvature: 0.0
+    lambda_distortion: 0.
+    lambda_opaque: 0.0 
+    lambda_depth_smoothness: 0.0
+    lambda_transient_noise: 0.0
+    lambda_argmax_consistency: 0.0
+    lambda_regnerf_sparse_depth_variance: 0.0
+    lambda_regnerf_depth_variance: 0.0
+    lambda_depth_variance : 0.0
+    lambda_sdf_loss: 0.0
+    lambda_geometric_smoothing: 0.0
+    lambda_surface_sdf_loss: 0.0
+    lambda_distortion_patch: 0.0
+    lambda_ray_entropy: 0.0
+    lambda_sparsity: 0.0
+    sparsity_scale: 0.
+
+  optimizer:
+    name: AdamW
+    args:
+      lr: 1.e-3
+      betas: [0.9, 0.99]
+      eps: 1.e-15
+    params:
+      geometry:
+        lr: 0.01
+      texture:
+        lr: 0.01
+      variance:
+        lr: 0.001
+
+  warmup_steps: 5000
+  scheduler:
+    name: SequentialLR
+    interval: step
+    milestones:
+      - ${system.warmup_steps}
+    schedulers:
+      - name: LinearLR # Start with 0.01*lr and end with 1.0*lr after 5000 steps
+        args:
+          start_factor: 0.01
+          end_factor: 1.0
+          total_iters: ${system.warmup_steps}
+      - name: ExponentialLR
+        args:
+          gamma: ${calc_exp_lr_decay_rate:0.1,${sub:${trainer.max_steps},${system.warmup_steps}}} #After 5000 steps, decay the learning rate by calculating 0.1**(remaining_steps)
+
+checkpoint:
+  save_top_k: -1
+  every_n_train_steps: 10000
+
+export:
+  chunk_size: 2097152
+  export_vertex_color: True
+  ref_mesh_path: /scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/transient_nerf_synthetic/${dataset.scene}/${dataset.scene}.obj
+  num_samples: 2500000
+
+trainer:
+  max_steps: 250000
+  log_every_n_steps: 100
+  num_sanity_val_steps: 0
+  val_check_interval: 1000000000000
+  limit_train_batches: 1.0
+  limit_val_batches: 3 #NOTE: change this to limit the number of iterations for validation
+  enable_progress_bar: true
+  precision: 16

@@ -1,0 +1,114 @@
+name: transient-nerf-captured-${dataset.scene}
+tag: "${dataset.scene}-${dataset.num_views}-views"
+seed: 42
+
+dataset:
+  name: captured_dataset
+  scene: ??? #NOTE: must end with raxel
+  root_dir: ./load/captured_data/${dataset.scene}
+  num_views: two
+  gamma: false
+  intrinsics: ./load/captured_data/${dataset.scene}/david_calibration_1005/intrinsics_david.npy
+  rfilter_sigma: 0.1
+  sample_as_per_distribution: false
+  img_wh:
+    - 512
+    - 512
+  img_downscale: 1 # specify training image size by either img_wh or img_downscale
+  near_plane: 2.0
+  far_plane: 6.0
+  train_split: "train"
+  val_split: "val"
+  test_split: "test"
+  test_no: 1
+  var_increase: 1
+
+model:
+  name: captured-nerf
+  radius: 0.4
+  num_samples_per_ray: 4096
+  train_num_rays: 512
+  max_train_num_rays: 8192
+  grid_prune: true
+  multi_ray_shooting: false # NOTE: Do not change this
+  dynamic_ray_sampling: false
+  batch_image_sampling: true
+  randomized: true
+  ray_chunk: 16384 #Decrease if OOM during validation/testing, powers of 2 e.g. 16384
+  learned_background: false
+  background_color: black
+  geometry:
+    name: volume-density
+    radius: ${model.radius}
+    feature_dim: 16
+    density_activation: trunc_exp
+    density_bias: -1
+    isosurface:
+      method: mc
+      resolution: 512
+      chunk: 2097152
+      threshold: 50 #NOTE: DO not change this
+    xyz_encoding_config:
+      otype: HashGrid
+      n_levels: 16
+      n_features_per_level: 2
+      log2_hashmap_size: 19
+      base_resolution: 16
+      per_level_scale: 1.447269237440378
+    mlp_network_config:
+      otype: FullyFusedMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 1
+  texture:
+    name: volume-radiance
+    input_feature_dim: ${model.geometry.feature_dim}
+    dir_encoding_config:
+      otype: SphericalHarmonics
+      degree: 4
+    mlp_network_config:
+      otype: FullyFusedMLP
+      activation: ReLU
+      output_activation: none
+      n_neurons: 64
+      n_hidden_layers: 2
+    color_activation: exp
+
+system:
+  name: captured-nerf-system
+  loss:
+    lambda_rgb: 1.
+    lambda_distortion: 0.
+    lambda_space_carving: 1.e-2
+  optimizer:
+    name: AdamW
+    args:
+      lr: 1.e-4 #NOTE: Do not change this
+      betas: [0.9, 0.99]
+      eps: 1.e-15
+  scheduler:
+    name: MultiStepLR
+    interval: step
+    args:
+      #NOTE: These milestones should be dynamically modified if trainer.max_steps were to change
+      milestones: [125000, 187500, 225000]
+      gamma: 0.33
+
+checkpoint:
+  save_top_k: -1
+  every_n_train_steps: 10000
+
+export:
+  chunk_size: 2097152
+  export_vertex_color: False
+
+trainer:
+  max_steps: 250000
+  log_every_n_steps: 100
+  num_sanity_val_steps: 0
+  val_check_interval: 3000
+  limit_train_batches: 1.0
+  limit_val_batches: 2
+  enable_progress_bar: true
+  precision: 16
