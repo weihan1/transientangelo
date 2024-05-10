@@ -426,7 +426,7 @@ class CapturedNeuSModel(BaseModel):
             if "regnerf_patch" in rays_dict and self.config.use_regnerf_viz:
                 regnerf_patch = rays_dict["regnerf_patch"]["rays"]
                 regnerf_out = self.forward_regnerf(regnerf_patch, laser_kernel)
-                out.udpate(regnerf_out)
+                out.update(regnerf_out)
             out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays, laser_kernel)
         return {
             **out,
