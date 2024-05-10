@@ -1,0 +1,65 @@
+Training:
+
+Synthetic dataset
+python launch.py --config configs/transient-nerf-blender.yaml --gpu 0 --train dataset.scene=
+python launch.py --config configs/transient-neus-blender.yaml --gpu 0 --train dataset.scene=
+python launch.py --config configs/transient-neuralangelo-blender.yaml --gpu 0 --train dataset.scene=
+
+
+Captured dataset
+python launch.py --config configs/transient-nerf-captured.yaml --gpu 0 --train dataset.scene=
+python launch.py --config configs/transient-neus-captured.yaml --gpu 0 --train dataset.scene=
+python launch.py --config configs/transient-neuralangelo-captured.yaml --gpu 0 --train dataset.scene=
+
+
+Eval:
+
+Testing/Resume on synthetic dataset
+python launch.py --config configs/transient-nerf-blender.yaml --resume --gpu 0 --test dataset.scene=
+python launch.py --config configs/transient-neus-blender.yaml --resume --gpu 0 --test dataset.scene=
+python launch.py --config configs/transient-neuralangelo-blender.yaml --resume --gpu 0 --test dataset.scene=
+
+Testing/Resume on captured dataset
+python launch.py --config configs/transient-nerf-captured.yaml --resume --gpu 0 --test dataset.scene=
+python launch.py --config configs/transient-neus-captured.yaml --resume --gpu 0 --test dataset.scene=
+python launch.py --config configs/transient-neuralangelo-captured.yaml --resume --gpu 0 --test dataset.scene=
+
+
+Baseline training:
+
+Synthetic dataset
+Neuralangelo: python launch.py --config configs/neuralangelo-baseline-blender.yaml --gpu 0 --train dataset.scene=
+Regnerf: python launch.py --config configs/regnerf-baseline-blender.yaml --gpu 0 --train dataset.scene=
+MonoSDF: python launch.py --config configs/monosdf-baseline-blender.yaml --gpu 0 --train dataset.scene=
+
+
+
+Captured dataset
+python launch.py --config configs/neuralangelo-baseline-captured.yaml --gpu 0 --train dataset.scene=
+
+
+
+
+
+Baseline eval:
+Neuralangelo: python launch.py --config configs/neuralangelo-baseline-blender.yaml --resume --gpu 0 --test dataset.scene=
+Regnerf: python launch.py --config configs/regnerf-baseline-blender.yaml --resume --gpu 0 --test dataset.scene=
+MonoSDF: python launch.py --config configs/monosdf-baseline-blender.yaml --resume --gpu 0 --test dataset.scene=
+
+
+
+
+
+
+
+Exporting:
+
+You can run the script using the following command:
+```bash
+python export.py --exp_dir <experiment_directory> --output-dir <output_directory> [--gpu <gpu_id>] [--decimate <decimation_factor>]
+```
+Arguments
+* --exp_dir: This argument is required. It specifies the directory of the experiment from which the trained model will be loaded.
+* --output-dir: This argument is required. It specifies the directory where the exported mesh will be saved. The mesh will saved at `$output_dir/iso_mesh.ply` by default.
+* --gpu: This argument is optional. It specifies the GPU(s) to be used. If not provided, it defaults to '0'.
+* --decimate: This argument is optional. It specifies the desired final size of the mesh. If the number is less than 1, it represents the final size as a percentage of the initial size. If the number is greater than 1, it represents the desired number of faces.
