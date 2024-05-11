@@ -81,9 +81,6 @@ class BaselineDatasetCapturedBase():
                 meta = json.load(f)
 
         W, H = self.config.img_wh
-        if self.config.downsample: #NOTE: we can only downsample by half the length
-            W, H = W//2, H//2
-            
         self.w, self.h = W, H
         self.img_wh = (self.w, self.h)
         self.meta = meta
