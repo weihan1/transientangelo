@@ -50,6 +50,7 @@ class BaselineDatasetCapturedBase():
         self.params = np.load(self.config.intrinsics, allow_pickle=True)[()]
         self.shift = self.params['shift'].numpy()
         self.rays = self.params['rays']
+        self.scene = self.config.scene
         transient_scale_dict = {'cinema_raxel': {"two": 483.755615234375, "three": 483.755615234375, "five": 491.021728515625}, 'carving_raxel': {"two": 299.24365234375, "three": 299.24365234375, "five": 323.334228515625}, 'boots_raxel': {"two": 273.02276611328125, "three": 273.02276611328125, "five": 277.6478271484375}, 'food_raxel': {"two": 553.1838989257812, "three": 553.1838989257812, "five": 561.6094970703125}, 'chef_raxel': {"two": 493.50701904296875, "three": 493.50701904296875, "five": 548.0447998046875}, 'baskets_raxel': {"two": 308.7045593261719, "three": 319.92572021484375, "five": 326.42620849609375}}
         self.transient_scale = transient_scale_dict[self.scene][self.n_views]
         self.div_vals = {'boots_raxel': 4470.0,
@@ -89,7 +90,7 @@ class BaselineDatasetCapturedBase():
         self.near, self.far = self.config.near_plane, self.config.far_plane
         self.depth_path = os.path.join(self.config.root_dir, self.config.scene + "_jsons", self.config.num_views + "_views", "depth")
         self.num_views = self.config.num_views
-        self.scene = self.config.scene
+        
         
         
         self.all_images = np.zeros((len(meta['frames']), 512, 512, 1200, 3))

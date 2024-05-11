@@ -26,7 +26,7 @@ dataset:
   use_gt_depth_normal: false
 
 model:
-  name: baseline-captured-neus
+  name: baseline-neus-captured
   radius: 0.4
   num_samples_per_ray: 4096
   train_num_rays: 512
