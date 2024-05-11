@@ -82,6 +82,7 @@ class NeuSModel(BaseModel):
         self.tfilter_sigma = 3
         self.epsilon_max=1.5
         self.epsilon_min = 0.025
+        self.near_plane, self.far_plane=None, None
         
     def update_step(self, epoch, global_step):
         update_module_step(self.geometry, epoch, global_step) #Doesn't update anything 

@@ -44,7 +44,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
         self.register_buffer("train_rep", torch.tensor(1, dtype=torch.long))
 
     def forward(self, batch):
-        return self.model(batch['rays'])
+        return self.model(batch['rays_dict'])
     
     def preprocess_data(self, batch, stage):
         #This populates the batch to feed into forward
@@ -156,19 +156,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
             
         #Converts pixel coordinates to normalized camera coordinates    
         c2w = self.dataset.all_c2w[index]
-        camera_dirs = F.pad(
-        torch.stack(
-            [
-                (s_x - self.dataset.K[0, 2] + 0.5) / self.dataset.K[0, 0],
-                (s_y - self.dataset.K[1, 2] + 0.5)
-                / self.dataset.K[1, 1]
-                * (-1.0 if self.dataset.OPENGL_CAMERA else 1.0),
-            ],
-            dim=-1,
-        ),
-        (0, 1),
-        value=(-1.0 if self.dataset.OPENGL_CAMERA else 1.0),
-        )
+        camera_dirs = self.dataset.K(s_x, s_y)
         
         if self.config.model.use_reg_nerf:
             regnerf_rays_d = (camera_dirs[-self.config.model.train_patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1) #upper left corner of the c2w     
@@ -179,7 +167,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
                 self.print("Regnerf patch rays has been added!")
                 
                 
-        rays_d = (camera_dirs[:, None, :] * c2w[:, :3, :3].to(self.rank)).sum(dim=-1) #upper left corner of the c2w
+        rays_d = (camera_dirs[:x.shape[0], None, :] * c2w[:, :3, :3].to(self.rank)).sum(dim=-1) #upper left corner of the c2w
         rays_o = torch.broadcast_to(c2w[:,:3, -1], rays_d.shape).to(self.rank) #Camera origins from the same view are the same 
         rays = torch.cat([rays_o, F.normalize(rays_d, p=2, dim=-1)], dim=-1).float() #(n_rays*rep, 6)
         rays_dict.update({"training_rays": {"rays": rays, 'rotation_matrix': c2w[:, :3, :3], 'index': index}})
