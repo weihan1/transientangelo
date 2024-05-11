@@ -133,7 +133,7 @@ model:
     color_activation: Sigmoid
 
 system:
-  name: baseline-neus-system
+  name: baseline-neus-captured-system
   loss:
     lambda_rgb_mse: 1.
     lambda_rgb_l1: 0.

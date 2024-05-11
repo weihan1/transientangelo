@@ -52,14 +52,14 @@ class BaselineDatasetCapturedBase():
         self.rays = self.params['rays']
         self.scene = self.config.scene
         transient_scale_dict = {'cinema_raxel': {"two": 483.755615234375, "three": 483.755615234375, "five": 491.021728515625}, 'carving_raxel': {"two": 299.24365234375, "three": 299.24365234375, "five": 323.334228515625}, 'boots_raxel': {"two": 273.02276611328125, "three": 273.02276611328125, "five": 277.6478271484375}, 'food_raxel': {"two": 553.1838989257812, "three": 553.1838989257812, "five": 561.6094970703125}, 'chef_raxel': {"two": 493.50701904296875, "three": 493.50701904296875, "five": 548.0447998046875}, 'baskets_raxel': {"two": 308.7045593261719, "three": 319.92572021484375, "five": 326.42620849609375}}
-        self.transient_scale = transient_scale_dict[self.scene][self.n_views]
+        self.view_scale = transient_scale_dict[self.scene][self.n_views]
         self.div_vals = {'boots_raxel': 4470.0,
                         'baskets_raxel': 6624.0,
                         'carving_raxel': 4975.0,
                         'chef_raxel': 9993.0,
                         'cinema_raxel': 8478.0,
                         'food_raxel': 16857.0}
-        
+        self.dataset_scale = self.div_vals[self.scene]
         laser_pulse_dic = sio.loadmat('./load/captured_data/pulse_low_flux.mat')['out'].squeeze()
         laser_pulse = laser_pulse_dic
         laser_pulse = (laser_pulse[::2] + laser_pulse[1::2])/2
@@ -87,11 +87,10 @@ class BaselineDatasetCapturedBase():
         self.near, self.far = self.config.near_plane, self.config.far_plane
         self.depth_path = os.path.join(self.config.root_dir, self.config.scene + "_jsons", self.config.num_views + "_views", "depth")
         self.num_views = self.config.num_views
-        
-        
-        
-        self.all_images = np.zeros((len(meta['frames']), 512, 512, 1200, 3))
+        self.all_images = np.zeros((len(meta['frames']), 512, 512, 1500, 3))
         self.all_c2w = np.zeros((len(meta['frames']), 4, 4))
+        
+        
         
         exposure_time = 299792458*4e-12
         x = (torch.arange(self.w, device="cpu")-self.w//2+0.5)/(self.w//2-0.5)
@@ -127,10 +126,6 @@ class BaselineDatasetCapturedBase():
             self.all_c2w = torch.from_numpy(self.all_c2w)
             
             
-            if self.split == "train":
-                assert abs(self.all_images.max() - self.view_scale)<1, "The view scale and the max of the images should be the same"
-                
-                    
             if self.config.scale_down_photon_factor < 1:
                 self.all_images *= self.config.scale_down_photon_factor
                 self.all_images = torch.poisson(self.all_images)
@@ -145,7 +140,8 @@ class BaselineDatasetCapturedBase():
                 c2w = torch.from_numpy(np.array(frame['transform_matrix']))
                 self.all_c2w[i] = c2w
             self.all_c2w = torch.from_numpy(self.all_c2w).float()
-            
+            camera_angle_x = float(meta["camera_angle_x"])
+            self.focal = 0.5 * self.w / np.tan(0.5 * camera_angle_x)
             
         self.K = LearnRays(self.rays, device=self.rank, img_shape=self.img_wh).to(self.rank)
         #NOTE: Finding the mean focus point
