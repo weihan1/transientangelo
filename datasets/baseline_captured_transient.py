@@ -107,18 +107,6 @@ class BaselineDatasetCapturedBase():
         del Y
         del Z
         
-        if self.scene == "lego":
-            emoji = "🚂"
-        elif self.scene == "hotdog":
-            emoji = "🌭"
-        elif self.scene == "chair":
-            emoji = "🪑"
-        elif self.scene == "benches":
-            emoji = "🛋️"
-        elif self.scene == "ficus":
-            emoji = "🌿"
-            
-        print(f"Loading the transients for the {self.scene} scene {emoji}!")  
         
         if self.split == "train" or self.split == "test":
             for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
