@@ -13,7 +13,6 @@ from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debu
 import models
 from models.utils import cleanup
 from models.ray_utils import get_rays, spatial_filter, generate_unseen_poses, find_surface_points
-from models.mesh_utils import calculate_chamfer_distance
 import systems
 from systems.base import BaseSystem
 from systems.criterions import PSNR, binary_cross_entropy, MSELoss, L1_depth, MSE_depth, get_gt_depth, get_depth_from_transient, SSIM, LPIPS, KL_DIV, TransientIOU
@@ -427,7 +426,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
         # # MSE_depth_gt_lm_gt = self.criterions["MSE_depth"](exr_depth, gt_depth, mask)
         
         #4. Transient IOU
-        iou = self.criterions["Transient_IOU"](rgb, gt_pixs)
         
         rgb_image = rgb
         ground_truth_image = gt_pixs
@@ -473,7 +471,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
             # 'mse': mse,
             'ssim': ssim,
             'lpips': lpips,
-            'iou': iou,
             'index': batch['index']
         }      
     
@@ -515,7 +512,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
                         # out_set[index]['mse'] = step_out['mse'][oi]
                         out_set[index]['ssim'] = step_out['ssim'][oi]
                         out_set[index]['lpips'] = step_out['lpips'][oi]
-                        out_set[index]['iou'] = step_out['iou'][oi]
                         
             rank_zero_info("Aggregating Metrics...")           
             l1_depth = torch.mean(torch.stack([o['l1_depth'] for o in out_set.values()]))
@@ -528,9 +524,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
             # mse = torch.mean(torch.stack([o['mse'] for o in out_set.values()]))
             ssim = torch.mean(torch.stack([o['ssim'] for o in out_set.values()]))
             lpips = torch.mean(torch.stack([o['lpips'] for o in out_set.values()]))
-            iou = torch.mean(torch.stack([o['iou'] for o in out_set.values()]))
             
-            self.log('test/chamfer_distance', chamfer_distance, prog_bar=True, rank_zero_only=True, sync_dist=True)
             self.log('test/l1_depth', l1_depth, prog_bar=True, rank_zero_only=True, sync_dist=True)    
             # self.log('test/MSE_depth', MSE_depth, prog_bar=True, rank_zero_only=True)    
             # self.log('test/l1_depth_gt_lm_ours', l1_depth_gt_lm_ours, prog_bar=True, rank_zero_only=True)    
@@ -541,9 +535,8 @@ class BaselineNeusCapturedSystem(BaseSystem):
             self.log('test/psnr', psnr, prog_bar=True, rank_zero_only=True, sync_dist=True) 
             self.log('test/ssim', ssim, prog_bar=True, rank_zero_only=True, sync_dist=True)
             self.log('test/lpips', lpips, prog_bar=True, rank_zero_only=True, sync_dist=True)
-            self.log('test/iou', iou, prog_bar=True, rank_zero_only=True, sync_dist=True)
             
-            metrics_dict = {"Chamfer Distance": chamfer_distance, "L1 Depth": l1_depth.item(), "PSNR": psnr.item(), "SSIM": ssim.item(), "LPIPS": lpips.item(), "IOU": iou.item()}
+            metrics_dict = {"L1 Depth": l1_depth.item(), "PSNR": psnr.item(), "SSIM": ssim.item(), "LPIPS": lpips.item()}
             
             self.save_metrics(f"it{self.global_step}-test.txt", metrics_dict)
             
