@@ -30,22 +30,31 @@ Baseline training:
 Synthetic dataset
 Neuralangelo: python launch.py --config configs/neuralangelo-baseline-blender.yaml --gpu 0 --train dataset.scene=
 Regnerf: python launch.py --config configs/regnerf-baseline-blender.yaml --gpu 0 --train dataset.scene=
-MonoSDF: python launch.py --config configs/monosdf-baseline-blender.yaml --gpu 0 --train dataset.scene=
+MonoSDF with mask: python launch.py --config configs/monosdf-baseline-blender.yaml --gpu 0 --train dataset.scene=
 
 
 
 Captured dataset
-python launch.py --config configs/neuralangelo-baseline-captured.yaml --gpu 0 --train dataset.scene=
+Neuralangelo: python launch.py --config configs/neuralangelo-baseline-captured.yaml --gpu 0 --train dataset.scene=
+Regnerf: python launch.py --config configs/regnerf-baseline-captured.yaml --gpu 0 --train dataset.scene=
+MonoSDF with mask: python launch.py --config configs/monosdf-baseline-captured.yaml --gpu 0 --train dataset.scene=
 
 
 
 
 
 Baseline eval:
+
+Synthetic dataset:
 Neuralangelo: python launch.py --config configs/neuralangelo-baseline-blender.yaml --resume --gpu 0 --test dataset.scene=
 Regnerf: python launch.py --config configs/regnerf-baseline-blender.yaml --resume --gpu 0 --test dataset.scene=
 MonoSDF: python launch.py --config configs/monosdf-baseline-blender.yaml --resume --gpu 0 --test dataset.scene=
 
+
+Captured dataset:
+Neuralangelo: python launch.py --config configs/neuralangelo-baseline-captured.yaml  --resume --gpu 0 --test dataset.scene=
+Regnerf: python launch.py --config configs/regnerf-baseline-captured.yaml  --resume --gpu 0 --test dataset.scene=
+MonoSDF: python launch.py --config configs/regnerf-baseline-captured.yaml  --resume --gpu 0 --test dataset.scene=
 
 
 

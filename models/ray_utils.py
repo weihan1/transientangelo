@@ -432,21 +432,42 @@ def find_surface_points(ray_origins, ray_dirs, opacities, depths, geometry_net, 
 
     return surface_points, sdf_surface, depths[considered_indices], considered_indices, normals
     
-def compute_normals(depth_map, intrinsic):
+# def compute_normals(depth_map, intrinsic):
+#     '''Compute the normals from the depth map using camera intrinsics.'''
+#     n, h, w = depth_map.shape
+#     u, v = torch.meshgrid(torch.arange(h), torch.arange(w), indexing="ij")
+    
+#     fx, fy = intrinsic[0, 0], intrinsic[1, 1]
+#     cx, cy = intrinsic[0, 2], intrinsic[1, 2]
+    
+#     z = torch.from_numpy(depth_map)
+#     x = (u - cx) * z / fx
+#     y = (v - cy) * z / fy
+    
+#     points = torch.stack([x, y, z], dim=-1)
+#     padded = torch.nn.functional.pad(points, (0, 0, 1, 1, 1, 1), mode='replicate')
+#     g_x = (padded[:, 2:, 1:-1] - padded[:, :-2, 1:-1]) / 2
+#     g_y = (padded[:, 1:-1, 2:] - padded[:, 1:-1, :-2]) / 2
+#     N = torch.cross(g_x, g_y, dim=-1)
+#     N_norm = torch.linalg.norm(N, dim=-1, keepdim=True)
+#     N_normalized = N / torch.where(N_norm == 0, torch.ones_like(N_norm), N_norm)
+    
+    return N_normalized
+
+
+
+def compute_normals(depth_map, K, c2w):
     '''Compute the normals from the depth map using camera intrinsics.'''
     n, h, w = depth_map.shape
-    u, v = torch.meshgrid(torch.arange(h), torch.arange(w), indexing="ij")
-    
-    fx, fy = intrinsic[0, 0], intrinsic[1, 1]
-    cx, cy = intrinsic[0, 2], intrinsic[1, 2]
-    
-    z = torch.from_numpy(depth_map)
-    x = (u - cx) * z / fx
-    y = (v - cy) * z / fy
-    
-    points = torch.stack([x, y, z], dim=-1)
+    # Compute ray origins and directions
+    origins, viewdirs = get_rays(K, c2w)
+    # Reshape depth_map for broadcasting
+    depth_map = torch.from_numpy(depth_map).reshape(n, h, w, 1)
+
+    # Compute 3D points
+    points = (depth_map * viewdirs + origins).reshape(n, h, w, 3)
     padded = torch.nn.functional.pad(points, (0, 0, 1, 1, 1, 1), mode='replicate')
-    g_x = (padded[:, 2:, 1:-1] - padded[:, :-2, 1:-1]) / 2
+    g_x = (padded[:, 2:, 1:-1] - padded[:, :-2, 1:-1]) / 2 #each of these terms is of shape (n, 512,512,3)
     g_y = (padded[:, 1:-1, 2:] - padded[:, 1:-1, :-2]) / 2
     N = torch.cross(g_x, g_y, dim=-1)
     N_norm = torch.linalg.norm(N, dim=-1, keepdim=True)

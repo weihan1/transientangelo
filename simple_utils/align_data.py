@@ -210,7 +210,44 @@ def plot_sliders():
     fig.show()
 
 
-def plot_pcs(pcs):
+def plot_pcs(pcs, normals_list):
+
+    fig = go.Figure()
+    for pc, normals, color in zip(pcs, normals_list, ['blue', 'red']):
+
+        trace1 = go.Scatter3d(x=pc[:, 0], y=pc[:, 1], z=pc[:, 2], mode='markers', marker=dict(size=1, color=pc[:, 2], colorscale='Viridis'))
+        fig.add_trace(trace1)
+
+        for point, normal in zip(pc, normals):
+            normal_end = point + 0.01 * normal  # Adjust scaling factor based on your needs
+            trace2 = go.Scatter3d(
+                x=[point[0], normal_end[0]],
+                y=[point[1], normal_end[1]],
+                z=[point[2], normal_end[2]],
+                mode='lines',
+                line=dict(color=color, width=2)
+            )
+            fig.add_trace(trace2)
+            
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(range=[-1, 1]),  # Adjust these ranges based on your data
+            yaxis=dict(range=[-1, 1]),
+            zaxis=dict(range=[-1, 1]),
+            camera=dict(
+                up=dict(x=0, y=0, z=1),  # Z-axis is up
+                eye=dict(x=1.25, y=1.25, z=1.25)  # Perspective view
+            )
+        ),
+        scene_camera_projection=dict(type="perspective")
+    )
+
+    # fig.write_image("/scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/simple_utils/depth.png")
+    fig.show()
+    
+    
+    
+def plot_pcs_depth(pcs):
 
     fig = go.Figure()
     for pc, color in zip(pcs, ['blue', 'red']):
@@ -220,13 +257,13 @@ def plot_pcs(pcs):
 
     fig.update_layout(
         scene=dict(
-            xaxis=dict(range=[-3, 3]),  # Adjust these ranges based on your data
-            yaxis=dict(range=[-3, 3]),
-            zaxis=dict(range=[-3, 3]),
+            xaxis=dict(range=[-1.5, 1.5]),  # Adjust these ranges based on your data
+            yaxis=dict(range=[-1.5, 1.5]),
+            zaxis=dict(range=[-1.5, 1.5]),
             camera=dict(
                 up=dict(x=0, y=0, z=1),  # Z-axis is up
                 eye=dict(x=1.25, y=1.25, z=1.25)  # Perspective view
-            )
+                )
         ),
         scene_camera_projection=dict(type="perspective")
     )

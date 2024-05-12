@@ -5,7 +5,7 @@ import numpy as np
 import os 
 import json 
 from read_depth import read_array
-from align_data import plot_pcs
+from align_data import plot_pcs_depth
 import tqdm
 import matplotlib.pyplot as plt 
 import re
@@ -58,7 +58,7 @@ def log_matched_filter(transient, filter):
 
 def plot_from_depth():
     
-    json_file = '/scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/transient_nerf_synthetic/lego/lego_jsons/ten_views/transforms_train.json'
+    json_file = '/scratch/ondemand28/weihanluo/transientangelo/load/transient_nerf_synthetic/lego/lego_jsons/ten_views/transforms_train.json'
     with open(json_file) as f:
         meta = json.load(f)
         
@@ -74,8 +74,8 @@ def plot_from_depth():
             dtype=torch.float32,
     )
     
-    mask_dir = "/scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/transient_nerf_synthetic/lego/masks"
-    transient_dir = "/scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/transient_nerf_synthetic/lego/out"
+    mask_dir = "/scratch/ondemand28/weihanluo/transientangelo/load/transient_nerf_synthetic/lego/masks"
+    transient_dir = "/scratch/ondemand28/weihanluo/transientangelo/load/transient_nerf_synthetic/lego/out"
     # camera id
     colmap_pcs = []
     exposure_time = 0.01
@@ -120,7 +120,7 @@ def plot_from_depth():
         colmap_pcs.append(colmap_pc)
         
     colmap_pc = torch.concat(colmap_pcs, dim=0)
-    plot_pcs([colmap_pc[::90], ])
+    plot_pcs_depth([colmap_pc[::90], ])
 
 
 if __name__=="__main__":
