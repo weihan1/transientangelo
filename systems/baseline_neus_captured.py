@@ -6,7 +6,7 @@ import numpy as np
 import pdb
 import matplotlib.pyplot as plt
 import math
-
+from scipy.ndimage import correlate1d
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
 
@@ -144,6 +144,8 @@ class BaselineNeusCapturedSystem(BaseSystem):
             x = x.flatten()
             y = y.flatten()
             rgb = self.dataset.all_images[index, y, x]
+            gt_transient = rgb #Need the gt transient to extract the gt depth
+            
             rgba_sum = rgb.sum(-2)
             rgba_sum_normalized = rgba_sum/self.dataset.dataset_scale
             rgba_sum_norm_gamma = rgba_sum_normalized**(1/2.2)
@@ -158,7 +160,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
         c2w = self.dataset.all_c2w[index]
         camera_dirs = self.dataset.K(s_x, s_y)
         
-        if self.config.model.use_reg_nerf:
+        if self.config.model.use_reg_nerf and stage in ["train", "validation"]:
             regnerf_rays_d = (camera_dirs[-self.config.model.train_patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1) #upper left corner of the c2w     
             unseen_rays_o = torch.broadcast_to(unseen_translation_vector, regnerf_rays_d.shape).to(self.rank).float()
             unseen_rays = torch.cat([unseen_rays_o, F.normalize(regnerf_rays_d, p=2, dim=-1)], dim=-1).float() #(self.patch_size**2 + sparse_rays, 6)
@@ -204,7 +206,8 @@ class BaselineNeusCapturedSystem(BaseSystem):
             batch.update({
                 'rays_dict': rays_dict,
                 'rgb': rgb,
-                'laser_kernel': self.dataset.laser_kernel
+                'laser_kernel': self.dataset.laser_kernel,
+                'gt_transient': gt_transient
             })
     
     
@@ -392,13 +395,15 @@ class BaselineNeusCapturedSystem(BaseSystem):
         
 
         # #Initialize all gt tensors
-        gt_pixs = batch["rgb"].view(H, W, 3).detach().cpu().numpy()
+        gt_pixs = batch["rgb"].view(H, W, 3).detach().cpu().numpy() #NOTE: this is the integrated image not the gt transient
+        gt_transient = batch["gt_transient"].view(H,W,self.dataset.n_bins,3)
         
+        
+        lm = correlate1d(gt_transient[..., 0], self.dataset.laser.cpu().numpy(), axis=-1)
+        exr_depth = np.argmax(lm, axis=-1)
+        exr_depth = (exr_depth*2*self.model.exposure_time)/2
         # #Get predicted and ground_truth depth 
-        exr_depth = get_gt_depth(meta_data["frames"][batch_idx], self.dataset.all_c2w[batch_idx].cpu().numpy(), self.dataset.depth_path) #(512,512)
-        if self.config.dataset.downsample: #downsampling the gt depth to match that of the predicted depth
-            exr_depth = (exr_depth[1::2, ::2] + exr_depth[::2, ::2] + exr_depth[::2, 1::2] + exr_depth[1::2, 1::2])/4
-        
+       
         # #Initialize all arrays as np arrays to prevent needing to convert tensor -> np arrays and populate
         rgb = out["comp_rgb_full"].numpy().reshape(H,W,3)
         depth = out["depth"].numpy().reshape(H,W)
@@ -447,12 +452,11 @@ class BaselineNeusCapturedSystem(BaseSystem):
         #Preprocess the exr_depth to have a black background
         exr_depth[exr_depth == exr_depth[0][0]] = 0
         
-        
         self.save_image_plot_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
             {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
-            {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":2.5, "vmax":5.5},},
-            {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":2.5, "vmax":5.5},},
+            {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
+            {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
         ])
         
         

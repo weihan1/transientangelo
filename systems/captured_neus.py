@@ -470,8 +470,8 @@ class CapturedNeuSSystem(BaseSystem):
         self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {'data_format': 'HWC'}},
             {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {'data_format': 'HWC'}},
-            {'type': 'grayscale', 'img': depth_image, 'kwargs': {},},
-            {'type': 'grayscale', 'img': exr_depth, 'kwargs': {},}
+            {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
+            {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
         ])
         
         
