@@ -455,12 +455,44 @@ def find_surface_points(ray_origins, ray_dirs, opacities, depths, geometry_net, 
     return N_normalized
 
 
+def get_rays_from_images(K, c2w):
+    x, y = torch.meshgrid(
+        torch.arange(512),
+        torch.arange(512),
+        indexing="xy",
+    )
+
+    x = x.flatten()
+    y = y.flatten()
+
+    dirs = F.pad(
+        torch.stack(
+            [
+                (x - K[0, 2] + 0.5) / K[0, 0],
+                (y - K[1, 2] + 0.5) / K[1, 1] * -1.0,
+            ], dim=-1), (0, 1), value=-1.0)
+
+    #Dimension for camera_dirs[:x.shape[0], None, None, :]
+    #Dimension for c2w[:, :3, :3]
+    directions = (dirs[:,None, None, :] * c2w[:, :3, :3]).sum(dim=-1)
+    directions = directions.view(c2w.shape[0],-1,3)
+    origins = torch.broadcast_to(c2w[:, None, :3, -1], directions.shape)
+    viewdirs = directions / torch.linalg.norm(
+        directions, dim=-1, keepdims=True
+    )
+
+    origins = torch.reshape(origins, (c2w.shape[0], 512, 512, 3))
+    viewdirs = torch.reshape(viewdirs, (c2w.shape[0], 512, 512, 3))
+
+    return origins, viewdirs
+
+
 
 def compute_normals(depth_map, K, c2w):
     '''Compute the normals from the depth map using camera intrinsics.'''
     n, h, w = depth_map.shape
     # Compute ray origins and directions
-    origins, viewdirs = get_rays(K, c2w)
+    origins, viewdirs = get_rays_from_images(K, c2w)
     # Reshape depth_map for broadcasting
     depth_map = torch.from_numpy(depth_map).reshape(n, h, w, 1)
 

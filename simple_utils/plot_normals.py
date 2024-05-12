@@ -58,10 +58,12 @@ def plot_from_depth():
     colmap_normals = []
     for i, frame in enumerate((meta['frames'])):
         c2w = torch.from_numpy(np.array(frame['transform_matrix']))
+        c2w = torch.eye(4)
         origins, viewdirs = get_rays(K, c2w)
-        
+        origins = torch.zeros(512,512,3)
         print("loading depths")
-        depth = np.load(f"depth_{i}.npy")
+        # depth = np.load(f"depth_{i}.npy")
+        depth = np.ones((512,512))
         plt.imshow(depth)
         plt.clf()
         plt.close()  
@@ -69,10 +71,10 @@ def plot_from_depth():
         print("calculating normals")
         normal = compute_normals(depth[None,...], K, c2w)
         normal = torch.squeeze(normal)
-        # plt.imshow(normal)
-        # plt.savefig(f"normal_{i}.png")
-        # plt.clf()
-        # plt.close()        
+        plt.imshow(normal)
+        plt.savefig(f"normal_{i}.png")
+        plt.clf()
+        plt.close()        
         
         normal_pc = normal.reshape(-1, 3)
         colmap_pc = (torch.from_numpy(depth[...,None]) * viewdirs + origins).reshape(-1, 3)
