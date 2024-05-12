@@ -482,8 +482,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
         if self.trainer.is_global_zero:
             rank_zero_info("Exporting Mesh...")
             mesh_path = self.export()
-            rank_zero_info("Calculating Chamfer Distance...")
-            chamfer_distance = calculate_chamfer_distance(mesh_path, self.config.export.ref_mesh_path, self.config.export.num_samples)
             out_set = {}
             for step_out in out:
                 # DP
