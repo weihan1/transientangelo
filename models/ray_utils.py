@@ -456,6 +456,11 @@ def find_surface_points(ray_origins, ray_dirs, opacities, depths, geometry_net, 
 
 
 def get_rays_from_images(K, c2w):
+    '''
+    K is a 3x3 intrinsic matrix
+    c2w is a (n,4x4) extrinsic matrix for each of the n images
+    '''
+    
     x, y = torch.meshgrid(
         torch.arange(512),
         torch.arange(512),
@@ -475,7 +480,7 @@ def get_rays_from_images(K, c2w):
     #Dimension for camera_dirs[:x.shape[0], None, None, :]
     #Dimension for c2w[:, :3, :3]
     directions = (dirs[:,None, None, :] * c2w[:, :3, :3]).sum(dim=-1)
-    directions = directions.view(c2w.shape[0],-1,3)
+    directions = directions.permute(1,0,2)
     origins = torch.broadcast_to(c2w[:, None, :3, -1], directions.shape)
     viewdirs = directions / torch.linalg.norm(
         directions, dim=-1, keepdims=True

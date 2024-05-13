@@ -402,7 +402,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
         exr_depth = np.argmax(lm, axis=-1)
         exr_depth = (exr_depth*2*self.model.exposure_time)/2
         # #Get predicted and ground_truth depth 
-       
         # #Initialize all arrays as np arrays to prevent needing to convert tensor -> np arrays and populate
         rgb = out["comp_rgb_full"].numpy().reshape(H,W,3)
         depth = out["depth"].numpy().reshape(H,W)
