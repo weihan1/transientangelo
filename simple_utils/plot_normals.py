@@ -57,13 +57,15 @@ def plot_from_depth():
     colmap_pcs = []
     colmap_normals = []
     for i, frame in enumerate((meta['frames'])):
+        if i == 1:
+            print("here")
         c2w = torch.from_numpy(np.array(frame['transform_matrix']))
-        c2w = torch.eye(4)
+        # c2w = torch.eye(4)
         origins, viewdirs = get_rays(K, c2w)
-        origins = torch.zeros(512,512,3)
+        # origins = torch.zeros(512,512,3)
         print("loading depths")
-        # depth = np.load(f"depth_{i}.npy")
-        depth = np.ones((512,512))
+        depth = np.load(f"depth_{i}.npy")
+        # depth = np.ones((512,512))
         plt.imshow(depth)
         plt.clf()
         plt.close()  

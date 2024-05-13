@@ -148,7 +148,7 @@ class BaselineDatasetBase():
         if self.config.use_gt_depth_normal and self.split == "train": #only need these for training 
             print("Calculating the ground truth depth and normals...🤖")
             self.all_depths = get_depth_from_transient(self.all_images, 0.01, 3, self.all_fg_masks if self.config.use_mask else None).reshape(-1, self.h, self.w)
-            self.all_normals = np.array(compute_normals(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w))
+            self.all_normals = compute_normals(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
                 
         #NOTE: Finding the mean focus point
         print(f"Finding mean focus point for {self.split} 🤔")
