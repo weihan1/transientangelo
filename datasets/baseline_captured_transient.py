@@ -85,7 +85,6 @@ class BaselineDatasetCapturedBase():
         self.img_wh = (self.w, self.h)
         self.meta = meta
         self.near, self.far = self.config.near_plane, self.config.far_plane
-        self.depth_path = os.path.join(self.config.root_dir, self.config.scene + "_jsons", self.config.num_views + "_views", "depth")
         self.num_views = self.config.num_views
         self.all_images = np.zeros((len(meta['frames']), 512, 512, 1500, 3))
         self.all_c2w = np.zeros((len(meta['frames']), 4, 4))
