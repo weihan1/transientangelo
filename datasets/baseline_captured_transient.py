@@ -17,9 +17,9 @@ import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 
 import datasets
-from models.ray_utils import get_ray_directions, find_mean_focus_point, LearnRays
+from models.ray_utils import get_ray_directions, find_mean_focus_point, LearnRays, compute_normals
 from utils.misc import get_rank
-from systems.criterions import get_depth_from_transient
+from systems.criterions import get_depth_from_transient, get_depth_from_transient_captured
 import h5py
 import collections
 import scipy.io as sio
@@ -89,6 +89,11 @@ class BaselineDatasetCapturedBase():
         self.all_images = np.zeros((len(meta['frames']), 512, 512, 1500, 3))
         self.all_c2w = np.zeros((len(meta['frames']), 4, 4))
         
+        if self.config.use_gt_depth_normal and self.split == 'train':
+            print("Calculating the ground truth depth and normals...🤖")
+            self.all_depths = get_depth_from_transient_captured(self.all_images, 0.01, 3, self.all_fg_masks if self.config.use_mask else None).reshape(-1, self.h, self.w)
+            self.all_normals = compute_normals(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
+
         
         
         exposure_time = 299792458*4e-12

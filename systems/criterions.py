@@ -7,6 +7,7 @@ import os
 import scipy
 from skimage.metrics import structural_similarity as ssim
 import lpips
+from scipy.ndimage import correlate1d
 
 class WeightedLoss(nn.Module):
     @property
@@ -261,6 +262,14 @@ def bins_to_depth_mitsuba(bin_numbers, exposure_time):
     times = bin_numbers*exposure_time
     times= times/2
     return times 
+
+def get_depth_from_transient_captured(transient, laser_kernel, exposure_time):
+    lm = correlate1d(transient[..., 0],laser_kernel, axis=-1)
+    exr_depth = np.argmax(lm, axis=-1)
+    exr_depth = (exr_depth*2*exposure_time)/2
+    
+    return exr_depth    
+    
 
 
 def log_matched_filter(transient, filter):

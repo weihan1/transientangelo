@@ -254,8 +254,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
         if self.config.dataset.use_gt_depth_normal:        
             loss_depth_consistency = F.mse_loss((predicted_depth[valid_rays[...,0]])[...,0], groundtruth_depth[valid_rays[...,0]]**2)
             loss += loss_depth_consistency * self.C(self.config.system.loss.lambda_depth_consistency)
-
-
             first_term = F.l1_loss(comp_normal[valid_rays[...,0]], batch["ground_truth_normals"][valid_rays[...,0]])
             dot_prod = (comp_normal[valid_rays[...,0]]*batch["ground_truth_normals"][valid_rays[...,0]]).sum(-1)
             second_term = torch.mean(torch.abs(1 - dot_prod))
