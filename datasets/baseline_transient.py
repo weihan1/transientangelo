@@ -95,7 +95,6 @@ class BaselineDatasetBase():
         if self.split == "train" or self.split == "test":
             for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
                 c2w = torch.from_numpy(np.array(frame['transform_matrix']))
-            
                 self.all_c2w[i] = c2w
                 number = int(frame["file_path"].split("_")[-1])
                 transient_path = os.path.join(self.config.root_dir, "out",f"{split}_{number:03d}" + ".h5")
@@ -110,10 +109,6 @@ class BaselineDatasetBase():
                     
                     
             self.all_images = torch.from_numpy(self.all_images)
-
-            if self.split == "train":
-                assert abs(self.all_images.max() - self.view_scale)<1, "The view scale and the max of the images should be the same during training"
-                
                     
             if self.config.scale_down_photon_factor < 1:
                 raise NotImplementedError
@@ -146,8 +141,13 @@ class BaselineDatasetBase():
         )
         
         if self.config.use_gt_depth_normal and self.split == "train": #only need these for training 
-            print("Calculating the ground truth depth and normals...🤖")
-            self.all_depths = get_depth_from_transient(self.all_images, 0.01, 3, self.all_fg_masks if self.config.use_mask else None).reshape(-1, self.h, self.w)
+            try: #loading from directory
+                print("Loading saved depths")
+                self.all_depths = np.load(f"{self.scene}-{self.num_views}-depths.npy")
+            except:
+                print("No depth found...Calculating the ground truth depth and normals...🤖")
+                self.all_depths = get_depth_from_transient(self.all_images, 0.01, 3, self.all_fg_masks if self.config.use_mask else None).reshape(-1, self.h, self.w)
+                np.save(f"{self.scene}-{self.num_views}-depths.npy", self.all_depths)
             self.all_normals = compute_normals(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
                 
         #NOTE: Finding the mean focus point
@@ -206,7 +206,7 @@ class BaselineDataModule(pl.LightningDataModule):
         sampler = None
         return DataLoader(
             dataset, 
-            num_workers=os.cpu_count(), 
+            num_workers=4,
             batch_size=batch_size,
             pin_memory=True,
             sampler=sampler

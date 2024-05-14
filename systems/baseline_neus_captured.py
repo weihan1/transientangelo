@@ -175,7 +175,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
         if self.trainer.global_step == 1:
             self.print("Training rays has been added!")
         
-        
+        rays_dict.update({"global_step": self.global_step})
         
         if self.config.model.background_color == 'white':
             self.model.background_color = torch.ones((3,), dtype=torch.float32, device=self.rank)
@@ -185,6 +185,8 @@ class BaselineNeusCapturedSystem(BaseSystem):
             self.model.background_color = torch.zeros(3, dtype = torch.float32, device=self.rank)
         else:
             raise NotImplementedError
+        
+        
         
         if stage in ["train"]:
             batch.update({

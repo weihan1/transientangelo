@@ -71,7 +71,7 @@ class BaselineNeusSystem(BaseSystem):
             x = x.repeat(self.train_rep) #(n_rays*rep)
             y = y.repeat(self.train_rep) #(n_rays*rep)
             index = index.repeat(self.train_rep)
-            rgb = self.dataset.all_images[index, y, x]
+            rgb = self.dataset.all_images[index, y, x] #(n_rays, 1200, 3)
             
             if self.config.dataset.use_gt_depth_normal:
                 ground_truth_depth = self.dataset.all_depths[index, y, x]
@@ -185,7 +185,9 @@ class BaselineNeusSystem(BaseSystem):
         rays_dict.update({"training_rays": {"rays": rays, 'rotation_matrix': c2w[:, :3, :3], 'index': index}})
         if self.trainer.global_step == 1:
             self.print("Training rays has been added!")
-            
+        
+        rays_dict.update({"global_step": self.global_step})
+        
         if self.config.model.background_color == 'white':
             self.model.background_color = torch.ones((3,), dtype=torch.float32, device=self.rank)
         elif self.config.model.background_color == 'random':
@@ -258,7 +260,7 @@ class BaselineNeusSystem(BaseSystem):
         
         
         if self.config.dataset.use_gt_depth_normal:        
-            loss_depth_consistency = F.mse_loss((predicted_depth[valid_rays[...,0]])[...,0], groundtruth_depth[valid_rays[...,0]]**2)
+            loss_depth_consistency = F.mse_loss((predicted_depth[valid_rays[...,0]])[...,0], groundtruth_depth[valid_rays[...,0]])
             loss += loss_depth_consistency * self.C(self.config.system.loss.lambda_depth_consistency)
 
 
@@ -267,9 +269,7 @@ class BaselineNeusSystem(BaseSystem):
             second_term = torch.mean(torch.abs(1 - dot_prod))
             loss_normal_consistency = first_term + second_term
             loss += loss_normal_consistency * self.C(self.config.system.loss.lambda_normal_consistency)        
-        
-        
-        
+
         
         loss_eikonal = ((torch.linalg.norm(out['sdf_grad_samples'], ord=2, dim=-1) - 1.)**2).mean()
         self.log('train/loss_eikonal', loss_eikonal)

@@ -82,9 +82,9 @@ class NeuSModel(BaseModel):
         self.tfilter_sigma = 3
         self.epsilon_max=1.5
         self.epsilon_min = 0.025
-        self.near_plane = None
-        self.far_plane = None
-        self.midplane = 500
+        self.near_plane=0
+        self.far_plane = 1e3
+        self.midplane = (self.near_plane + self.far_plane) / 2
         self.eta = 1
         
     def update_step(self, epoch, global_step):
@@ -214,21 +214,21 @@ class NeuSModel(BaseModel):
         return out
 
     
-    def forward_regnerf(self, unseen_rays):
+    def forward_regnerf(self, unseen_rays, global_step):
         n_rays = unseen_rays.shape[0]
         rays_o, rays_d = unseen_rays[:, 0:3], unseen_rays[:, 3:6] # both (N_rays, 3)
         result = {}
-        #if self.config.space_annealing:
-            #self.eta = min(max(self.global_step/256, 0.5))
-            #self.near_plane = self.midplane + (self.near_plane - self.midplane)*self.eta
-            #self.far_plane = self.midplane + (self.far_plane - self.midplane)*self.eta
+        if self.config.space_annealing:
+            self.eta = max(min(global_step/256, 0.5), 1)
+            self.near_plane = self.midplane + (self.near_plane - self.midplane)*self.eta
+            self.far_plane = self.midplane + (self.far_plane - self.midplane)*self.eta
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(
                 rays_o, rays_d,
                 scene_aabb=self.scene_aabb,
                 grid=self.occupancy_grid if self.config.grid_prune else None,
                 alpha_fn=None,
-                near_plane=self.near_plane, far_plane=self.far_plane,
+                near_plane=self.near_plane if self.config.space_annealing else None, far_plane=self.far_plane if self.config.space_annealing else None,
                 render_step_size=self.render_step_size,
                 stratified=self.randomized,
                 cone_angle=0.0,
@@ -265,14 +265,13 @@ class NeuSModel(BaseModel):
         return result
 
 
-    def forward_(self, rays):
+    def forward_(self, rays, global_step):
         n_rays = rays.shape[0]
         rays_o, rays_d = rays[:, 0:3], rays[:, 3:6] # both (N_rays, 3)
-        #TODO: implement space annealing sampling. Midplane is fixed to be 500
-        #if self.config.space_annealing:
-            #self.eta = min(max(self.global_step/256, 0.5))
-            #self.near_plane = self.midplane + (self.near_plane - self.midplane)*self.eta
-            #self.far_plane = self.midplane + (self.far_plane - self.midplane)*self.eta
+        if self.config.space_annealing:
+            self.eta = max(min(global_step/256, 0.5), 1)
+            self.near_plane = self.midplane + (self.near_plane - self.midplane)*self.eta
+            self.far_plane = self.midplane + (self.far_plane - self.midplane)*self.eta
             
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(
@@ -280,7 +279,7 @@ class NeuSModel(BaseModel):
                 scene_aabb=self.scene_aabb,
                 grid=self.occupancy_grid if self.config.grid_prune else None,
                 alpha_fn=None,
-                near_plane=self.near_plane, far_plane=self.far_plane,
+                near_plane=self.near_plane if self.config.space_annealing else None, far_plane=self.far_plane if self.config.space_annealing else None,
                 render_step_size=self.render_step_size,
                 stratified=self.randomized,
                 cone_angle=0.0,
@@ -300,18 +299,15 @@ class NeuSModel(BaseModel):
             sdf, sdf_grad, feature, sdf_laplace = self.geometry(positions, with_grad=True, with_feature=True, with_laplace=True)
         else:
             sdf, sdf_grad, feature = self.geometry(positions, with_grad=True, with_feature=True)
+            
         normal = F.normalize(sdf_grad, p=2, dim=-1)
         alpha = self.get_alpha(sdf, normal, t_dirs, dists)[...,None]
         rgb = self.texture(feature, t_dirs, normal)
 
         weights = render_weight_from_alpha(alpha, ray_indices=ray_indices, n_rays=n_rays)
         opacity = accumulate_along_rays(weights, ray_indices, values=None, n_rays=n_rays)
-        
         #Normal depth calculation from nerf
-        
         depths = accumulate_along_rays(weights, ray_indices, values=midpoints, n_rays=n_rays)     
-        
-                
         comp_rgb = accumulate_along_rays(weights, ray_indices, values=rgb, n_rays=n_rays)
         comp_normal = accumulate_along_rays(weights, ray_indices, values=normal, n_rays=n_rays)
         comp_normal = F.normalize(comp_normal, p=2, dim=-1)
@@ -350,7 +346,7 @@ class NeuSModel(BaseModel):
             }
 
         out_full = {
-            'comp_rgb': out['comp_rgb'] + out_bg['comp_rgb'] * (1.0 - out['opacity']),
+            'comp_rgb': out['comp_rgb'] + out_bg['comp_rgb'] * (1.0 - out['opacity']), #NOTE: if no background modelling, this part equals out["comp_rgb"]
             'num_samples': out['num_samples'] + out_bg['num_samples'],
             'rays_valid': out['rays_valid'] | out_bg['rays_valid']
         }
@@ -368,15 +364,16 @@ class NeuSModel(BaseModel):
         in the form of {something_rays: {"rays": rays, "metadata": metadata}}
         '''
         training_rays = rays_dict["training_rays"]["rays"]
+        global_step = rays_dict["global_step"]
         if self.training:
             out = {}
             if self.config.use_reg_nerf:
                 regnerf_patch = rays_dict["regnerf_patch"]["rays"]
-                regnerf_out = self.forward_regnerf(regnerf_patch)
+                regnerf_out = self.forward_regnerf(regnerf_patch, global_step)
                 out.update(regnerf_out)
-            out.update(self.forward_(training_rays))
+            out.update(self.forward_(training_rays, global_step))
         else:
-            out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays)
+            out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays, global_step)
         return {
             **out,
             'inv_s': self.variance.inv_s

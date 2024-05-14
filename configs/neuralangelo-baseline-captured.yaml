@@ -36,6 +36,7 @@ model:
   multi_ray_shooting: false #NOTE: set this to false for fast training
   dynamic_ray_sampling: false
   batch_image_sampling: true
+  space_annealing: false
   use_reg_nerf: false
   train_patch_size: 8 #Only used if regnerf is used - patch size is the length of the side of the square patch, NOT the number of pixels
   sparse_rays_size: 0 #Only used if regnerf is used - number of sparse rays that we sample from the unknown poses
