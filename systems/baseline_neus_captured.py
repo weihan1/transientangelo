@@ -409,7 +409,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
         
         depth_image = depth*opacity   
         
-        mask = (gt_pixs.sum((-1, -2)) > 0) # (H,W
+        mask = (gt_pixs.sum(-1) > 0) # (H,W
         # #1. Calculate the L1 and MSE error b/w rendered depth vs gt depths (gt depths can be extracted using the get_gt_depth function)
         l1_depth = self.criterions["l1_depth"](exr_depth, depth, mask)
         # # MSE_depth = self.criterions["MSE_depth"](exr_depth, depth, mask)

@@ -277,19 +277,6 @@ class BaselineNeusSystem(BaseSystem):
         
         opacity = torch.clamp(out['opacity'].squeeze(-1), 1.e-3, 1.-1.e-3)
         
-        if "fg_mask" in batch:
-            loss_mask = binary_cross_entropy(opacity, batch['fg_mask'].float())
-            self.log('train/loss_mask', loss_mask)
-            loss += loss_mask * (self.C(self.config.system.loss.lambda_mask) if self.dataset.has_mask else 0.0)
-
-        loss_opaque = binary_cross_entropy(opacity, opacity)
-        self.log('train/loss_opaque', loss_opaque)
-        loss += loss_opaque * self.C(self.config.system.loss.lambda_opaque)
-
-        loss_sparsity = torch.exp(-self.config.system.loss.sparsity_scale * out['sdf_samples'].abs()).mean()
-        self.log('train/loss_sparsity', loss_sparsity)
-        loss += loss_sparsity * self.C(self.config.system.loss.lambda_sparsity)
-
         if self.C(self.config.system.loss.lambda_curvature) > 0:
             assert 'sdf_laplace_samples' in out, "Need geometry.grad_type='finite_difference' to get SDF Laplace samples"
             loss_curvature = out['sdf_laplace_samples'].abs().mean()
@@ -319,18 +306,6 @@ class BaselineNeusSystem(BaseSystem):
             
             self.log('train/loss_curvature', loss_curvature)
             loss += loss_curvature * self.C(self.config.system.loss.lambda_curvature)
-
-        # distortion loss proposed in MipNeRF360
-        # an efficient implementation from https://github.com/sunset1995/torch_efficient_distloss
-        if self.C(self.config.system.loss.lambda_distortion) > 0:
-            loss_distortion = flatten_eff_distloss(out['weights'], out['points'], out['intervals'], out['ray_indices'])
-            self.log('train/loss_distortion', loss_distortion)
-            loss += loss_distortion * self.C(self.config.system.loss.lambda_distortion)    
-
-        if self.config.model.learned_background and self.C(self.config.system.loss.lambda_distortion_bg) > 0:
-            loss_distortion_bg = flatten_eff_distloss(out['weights_bg'], out['points_bg'], out['intervals_bg'], out['ray_indices_bg'])
-            self.log('train/loss_distortion_bg', loss_distortion_bg)
-            loss += loss_distortion_bg * self.C(self.config.system.loss.lambda_distortion_bg)        
 
         losses_model_reg = self.model.regularizations(out)
         for name, value in losses_model_reg.items():
@@ -414,7 +389,7 @@ class BaselineNeusSystem(BaseSystem):
 
         depth_image = depth*opacity   
         
-        mask = (gt_pixs.sum((-1, -2)) > 0) # (H,W)
+        mask = (gt_pixs.sum(-1) > 0) # (H,W)
         
         # #1. Calculate the L1 and MSE error b/w rendered depth vs gt depths (gt depths can be extracted using the get_gt_depth function)
         l1_depth = self.criterions["l1_depth"](exr_depth, depth, mask)
