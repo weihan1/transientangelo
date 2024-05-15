@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 import os
 import h5py
 from PIL import Image
+import mat73
 
 def read_h5(path):
     with h5py.File(path, 'r') as f:
@@ -18,7 +19,6 @@ def main():
     #1. Load all training transients for one scene
     #Over all 10 training views
     root_dir = f"/scratch/ondemand28/weihanluo/transientangelo/load/transient_nerf_synthetic/{args.scene}/clean_transients"
-    
     gt_transient = np.zeros((10,512,512,1200,3))
     for i in range(10):
         print(f"loading clean transients {i} for {args.scene}")
@@ -35,19 +35,42 @@ def main():
     total_intensity_captured = 0
     
     for scene in captured_scene:
+        w,h = 512,512
+        n_bins=1500
+        intrinsics = f"./load/captured_data/{scene}/david_calibration_1005/intrinsics_david.npy"
+        params = np.load(intrinsics, allow_pickle=True)[()]
+        shift = params['shift'].numpy()
+        exposure_time = 299792458*4e-12
+        x = (torch.arange(w, device="cpu")-w//2+0.5)/(w//2-0.5)
+        y = (torch.arange(w, device="cpu")-w//2+0.5)/(w//2-0.5)
+        z = torch.arange(n_bins*2, device="cpu").float()
+        X, Y, Z = torch.meshgrid(x, y, z, indexing="xy")
+        Z = Z*exposure_time/2
+        Z = Z - shift[0]
+        Z = Z*2/exposure_time
+        Z = (Z-n_bins*2//2+0.5)/(n_bins*2//2-0.5)
+        grid = torch.stack((Z, X, Y), dim=-1)[None, ...]
+        del X
+        del Y
+        del Z
         gt_captured_transient = np.zeros((20,512,512,1200,3))
-        captured_mask = np.zeros(512,512)
-        low_photon_dir = os.path.join(captured_root_dir, scene, "low_photon_transients", args.photon_level)
+        captured_mask = np.zeros((20,512,512))
+        low_photon_dir = os.path.join(captured_root_dir, scene, "low_photon_transients", f"{scene}_{args.photon_level}")
         mask_dir = os.path.join(captured_root_dir, scene)
         for i in range(20):
             print(f"loading captured transients {i} for {scene}")
-            transient_path = os.path.join(low_photon_dir, f"transient00{i}.mat")
+            transient_path = os.path.join(low_photon_dir, f"transient00{i+1}.mat")
             mask_path = os.path.join(mask_dir, f"mask{i}.png")
-            gt_captured_transient[i] = read_h5(transient_path)
-            captured_mask[i] = Image.open(mask_path)
+            matlab_transient = mat73.loadmat(transient_path)["transients"].reshape(h,w,-1)
+            matlab_transient = matlab_transient[..., :3000].float()
+            matlab_transient = torch.nn.functional.grid_sample(matlab_transient[None, None, ...], grid, align_corners=True).squeeze()
+            matlab_transient = (matlab_transient[..., 1::2]+matlab_transient[..., ::2])/2
+            gt_captured_transient[i] = matlab_transient.numpy()
+            mask = Image.open(mask_path)
+            captured_mask = mask/255
         captured_transient_img = gt_captured_transient.sum(-2) #(20,512,512,3)
         sum_of_masked_pixels_captured += np.sum(captured_mask)
-        total_intensity_captured += captured_transient_img[mask].sum() 
+        total_intensity_captured += captured_transient_img[captured_mask].sum() 
         
     average_intensity_per_pixel_captured = total_intensity_captured/sum_of_masked_pixels_captured  
     print(f"The average intensity per pixel for the captured transients for level {args.photon_level} is {average_intensity_per_pixel_captured}")

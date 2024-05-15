@@ -139,7 +139,6 @@ class BaselineDatasetBase():
             ],
             dtype=torch.float32,
         )
-        
         if self.config.use_gt_depth_normal and self.split == "train": #only need these for training 
             try: #loading from directory
                 print("Loading saved depths")
@@ -206,7 +205,7 @@ class BaselineDataModule(pl.LightningDataModule):
         sampler = None
         return DataLoader(
             dataset, 
-            num_workers=4,
+            num_workers=1,
             batch_size=batch_size,
             pin_memory=True,
             sampler=sampler
