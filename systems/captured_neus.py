@@ -85,7 +85,7 @@ class CapturedNeuSSystem(BaseSystem):
                 img_wh = self.dataset.w, self.dataset.h
                 regnerf_x, regnerf_y, unseen_rotation_matrix, unseen_translation_vector = generate_unseen_poses(patch_size, img_wh, self.dataset.all_c2w, n_sparse_rays=n_sparse_rays, 
                                                                                                 bounding_form =self.config.model.bounding_form, mean_focus_point = self.dataset.mean_focus_point,
-                                                                                                sample_boundary = self.config.model.sample_boundary, write_poses = self.config.model.write_poses)
+                                                                                                sample_boundary = self.config.model.sample_boundary, write_poses = self.config.model.write_poses, captured=True)
                 regnerf_x, regnerf_y = regnerf_x.to(self.rank), regnerf_y.to(self.rank)
                 unseen_rotation_matrix = torch.from_numpy(unseen_rotation_matrix).to(self.rank)
                 #Calculate the rays for the unseen patch using the new rotation matrix and translation vector
@@ -115,7 +115,7 @@ class CapturedNeuSSystem(BaseSystem):
                 img_wh = self.dataset.w, self.dataset.h
                 regnerf_x, regnerf_y, unseen_rotation_matrix, unseen_translation_vector = generate_unseen_poses(patch_size, img_wh, self.dataset.all_c2w, n_sparse_rays=n_sparse_rays, 
                                                                                                 bounding_form =self.config.model.bounding_form, mean_focus_point = self.dataset.mean_focus_point,
-                                                                                                sample_boundary = self.config.model.sample_boundary)
+                                                                                                sample_boundary = self.config.model.sample_boundary, captured=True)
                 regnerf_x, regnerf_y = regnerf_x.to(self.rank), regnerf_y.to(self.rank)
                 unseen_rotation_matrix = torch.from_numpy(unseen_rotation_matrix).to(self.rank)
                 #Calculate the rays for the unseen patch using the new rotation matrix and translation vector
@@ -207,7 +207,7 @@ class CapturedNeuSSystem(BaseSystem):
         if self.config.model.use_reg_nerf:     
             if out["num_samples_regnerf"] > 0:       
                 color_patch = out["color_patch"]
-                depth_patch = out["depth_patch"]
+                depth_patch = out["depth_patch"].reshape(self.config.model.train_patch_size, self.config.model.train_patch_size)
                 opacity_patch = out["opacity_patch"]
                 transient_patch = out["transient_patch"]
                 depth_variance_patch = out["depth_variance_patch"]
@@ -219,11 +219,10 @@ class CapturedNeuSSystem(BaseSystem):
                 assert (depth_variance_patch == out["depth_variance_patch"][:64]).all()
                 
                 ##NOTE: Depth smoothness regularizer
-                differences_row = depth_patch[:, 1:] - depth_patch[:, :-1] 
-                differences_col = depth_patch[1:, :] - depth_patch[:-1, :]
-                smoothness_loss_row = torch.sum((differences_row)**2)
-                smoothness_loss_col = torch.sum((differences_col)**2)
-                smoothness_loss = smoothness_loss_row + smoothness_loss_col
+                v00 = depth_patch[:-1, :-1]
+                v01 = depth_patch[:-1, 1:]
+                v10 = depth_patch[1:, :-1]
+                smoothness_loss = (torch.sum(((v00 - v01) ** 2) + ((v00 - v10) ** 2))).item()
                 loss += smoothness_loss * self.C(self.config.system.loss.lambda_depth_smoothness)
 
         

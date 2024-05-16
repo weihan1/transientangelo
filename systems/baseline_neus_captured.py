@@ -95,7 +95,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
                 img_wh = self.dataset.w, self.dataset.h
                 regnerf_x, regnerf_y, unseen_rotation_matrix, unseen_translation_vector = generate_unseen_poses(patch_size, img_wh, self.dataset.all_c2w, n_sparse_rays=n_sparse_rays, 
                                                                                                 bounding_form =self.config.model.bounding_form, mean_focus_point = self.dataset.mean_focus_point,
-                                                                                                sample_boundary = self.config.model.sample_boundary, write_poses = self.config.model.write_poses)
+                                                                                                sample_boundary = self.config.model.sample_boundary, write_poses = self.config.model.write_poses, captured=True)
                 regnerf_x, regnerf_y = regnerf_x.to(self.rank), regnerf_y.to(self.rank)
                 unseen_rotation_matrix = torch.from_numpy(unseen_rotation_matrix).to(self.rank)
                 #Calculate the rays for the unseen patch using the new rotation matrix and translation vector
@@ -126,7 +126,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
                 img_wh = self.dataset.w, self.dataset.h
                 regnerf_x, regnerf_y, unseen_rotation_matrix, unseen_translation_vector = generate_unseen_poses(patch_size, img_wh, self.dataset.all_c2w, n_sparse_rays=n_sparse_rays, 
                                                                                                 bounding_form =self.config.model.bounding_form, mean_focus_point = self.dataset.mean_focus_point,
-                                                                                                sample_boundary = self.config.model.sample_boundary, write_poses = self.config.model.write_poses)
+                                                                                                sample_boundary = self.config.model.sample_boundary, write_poses = self.config.model.write_poses, captured=True)
                 regnerf_x, regnerf_y = regnerf_x.to(self.rank), regnerf_y.to(self.rank)
                 unseen_rotation_matrix = torch.from_numpy(unseen_rotation_matrix).to(self.rank)
                 #Calculate the rays for the unseen patch using the new rotation matrix and translation vector
@@ -159,13 +159,14 @@ class BaselineNeusCapturedSystem(BaseSystem):
         c2w = self.dataset.all_c2w[index]
         camera_dirs = self.dataset.K(s_x, s_y)
         
-        if self.config.model.use_reg_nerf and stage in ["train", "validation"]:
-            regnerf_rays_d = (camera_dirs[-self.config.model.train_patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1) #upper left corner of the c2w     
-            unseen_rays_o = torch.broadcast_to(unseen_translation_vector, regnerf_rays_d.shape).to(self.rank).float()
-            unseen_rays = torch.cat([unseen_rays_o, F.normalize(regnerf_rays_d, p=2, dim=-1)], dim=-1).float() #(self.patch_size**2 + sparse_rays, 6)
+        if self.config.model.use_reg_nerf and stage not in ["test"]:
+            patch_size = self.config.model.train_patch_size if stage == "train" else 512
+            regnerf_rays_d = (camera_dirs[-patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1)
+            unseen_rays_o = unseen_translation_vector.expand_as(regnerf_rays_d).to(self.rank).float()
+            unseen_rays = torch.cat([unseen_rays_o, F.normalize(regnerf_rays_d, p=2, dim=-1)], dim=-1).float()
             rays_dict.update({"regnerf_patch": {'rays': unseen_rays, 'rotation_matrix': unseen_rotation_matrix}})
             if self.trainer.global_step == 1:
-                self.print("Regnerf patch rays has been added!")
+                self.print("Regnerf patch rays have been added!")
                 
                 
         rays_d = (camera_dirs[:x.shape[0], None, :] * c2w[:, :3, :3].to(self.rank)).sum(dim=-1) #upper left corner of the c2w
@@ -222,12 +223,11 @@ class BaselineNeusCapturedSystem(BaseSystem):
             #NOTE: This loss is used when reproducing regnerf
             if out["num_samples_regnerf"] > 0:
                 #Depth smoothness regularizer
-                depth_patch = out["depth_patch"]
-                differences_row = depth_patch[:, 1:] - depth_patch[:, :-1] 
-                differences_col = depth_patch[1:, :] - depth_patch[:-1, :]
-                smoothness_loss_row = torch.sum((differences_row)**2)
-                smoothness_loss_col = torch.sum((differences_col)**2)
-                smoothness_loss = smoothness_loss_row + smoothness_loss_col
+                depth_patch = out["depth_patch"].reshape(self.config.model.train_patch_size, self.config.model.train_patch_size)
+                v00 = depth_patch[:-1, :-1]
+                v01 = depth_patch[:-1, 1:]
+                v10 = depth_patch[1:, :-1]
+                smoothness_loss = (torch.sum(((v00 - v01) ** 2) + ((v00 - v10) ** 2))).item()
                 loss += smoothness_loss * self.C(self.config.system.loss.lambda_depth_smoothness)
 
         # update train_num_rays

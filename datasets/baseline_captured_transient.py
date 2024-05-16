@@ -163,7 +163,7 @@ class BaselineDatasetCapturedBase():
         known_camera_locations = self.all_c2w[:, :3, -1]
         self.mean_focus_point = find_mean_focus_point_regnerf(known_camera_locations, optical_axes)
         print(f"The mean focus point is {self.mean_focus_point.tolist()} 🤓")
-        
+        print(f"its average distance to existing camera locations is {np.mean(np.linalg.norm(known_camera_locations - self.mean_focus_point, axis=-1))} 📏")
         
         
 class BaselineDataset(Dataset, BaselineDatasetCapturedBase):

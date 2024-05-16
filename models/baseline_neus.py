@@ -82,11 +82,14 @@ class NeuSModel(BaseModel):
         self.tfilter_sigma = 3
         self.epsilon_max=1.5
         self.epsilon_min = 0.025
-        self.near_plane=0
-        self.far_plane = 1e3
-        self.midplane = (self.near_plane + self.far_plane) / 2
-        self.eta = 1
         
+        self.near_plane = self.near_plane_regnerf = 0
+        self.far_plane= self.far_plane_regnerf = 10
+        self.midplane = (self.near_plane + self.far_plane) / 2
+        self.near_init =self.midplane + 0.2*(self.near_plane-self.midplane)
+        self.far_init = self.midplane + 0.2*(self.far_plane-self.midplane)
+        
+                
     def update_step(self, epoch, global_step):
         update_module_step(self.geometry, epoch, global_step) #Doesn't update anything 
         update_module_step(self.texture, epoch, global_step) #Doesn't update anything
@@ -219,9 +222,10 @@ class NeuSModel(BaseModel):
         rays_o, rays_d = unseen_rays[:, 0:3], unseen_rays[:, 3:6] # both (N_rays, 3)
         result = {}
         if self.config.space_annealing:
-            self.eta = max(min(global_step/256, 0.5), 1)
-            self.near_plane = self.midplane + (self.near_plane - self.midplane)*self.eta
-            self.far_plane = self.midplane + (self.far_plane - self.midplane)*self.eta
+            self.eta = min(global_step/256, 1.0)
+            self.near_plane_regnerf = max(self.near_init + (self.near_plane_regnerf - self.midplane) * self.eta, 0)
+            self.far_plane_regnerf = min(self.far_init + (self.far_plane_regnerf - self.midplane)*self.eta, 100)
+            
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(
                 rays_o, rays_d,
@@ -264,23 +268,13 @@ class NeuSModel(BaseModel):
                     "num_samples_regnerf": len(ray_indices)})
         return result
 
-        mid = near_final + mid_perc * (far_final - near_final)
-
-        near_init = mid + init_perc * (near_final - mid)
-        far_init = mid + init_perc * (far_final - mid)
-
-        weight = min(it * 1.0 / n_steps, 1.0)
-
-        near_i = near_init + weight * (near_final - near_init)
-        far_i = far_init + weight * (far_final - far_init)
-
     def forward_(self, rays, global_step):
         n_rays = rays.shape[0]
         rays_o, rays_d = rays[:, 0:3], rays[:, 3:6] # both (N_rays, 3)
         if self.config.space_annealing:
-            self.eta = max(min(global_step/256, 0.5), 1)
-            self.near_plane = self.midplane + (self.near_plane - self.midplane)*self.eta
-            self.far_plane = self.midplane + (self.far_plane - self.midplane)*self.eta
+            self.eta = min(global_step/256, 1.0)
+            self.near_plane = max(self.near_init + (self.near_plane - self.midplane) * self.eta, 0)
+            self.far_plane = min(self.far_init + (self.far_plane - self.midplane)*self.eta, 100)
             
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(

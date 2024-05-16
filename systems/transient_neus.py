@@ -284,11 +284,11 @@ class TransientNeuSSystem(BaseSystem):
             if out["num_samples_regnerf"] > 0:
                 if self.config.model.train_patch_size>0:
                     #NOTE: the following tensors are always used if patch regnerf is used 
-                    color_patch = out["color_patch"][:self.config.model.train_patch_size**2] 
-                    depth_patch = out["depth_patch"][:self.config.model.train_patch_size**2]
-                    transient_patch = out["transient_patch"][:self.config.model.train_patch_size**2]
-                    depth_variance_patch = out["depth_variance_patch"][:self.config.model.train_patch_size**2]
-                    sdf_grad_samples = out["sdf_grad_samples"][:self.config.model.train_patch_size**2]
+                    color_patch = out["color_patch"]
+                    depth_patch = out["depth_patch"].reshape(self.config.model.trian_patch_size, self.config.model.train_patch_size)
+                    transient_patch = out["transient_patch"]
+                    depth_variance_patch = out["depth_variance_patch"]
+                    sdf_grad_samples = out["sdf_grad_samples"]
                     
                     
                     # #NOTE: Assumption that we only use 8x8 patch
@@ -298,12 +298,12 @@ class TransientNeuSSystem(BaseSystem):
                     # assert (depth_variance_patch == out["depth_variance_patch"][:64]).all()
                     
                     ##NOTE: Depth smoothness regularizer
-                    differences_row = depth_patch[:, 1:] - depth_patch[:, :-1] 
-                    differences_col = depth_patch[1:, :] - depth_patch[:-1, :]
-                    smoothness_loss_row = torch.sum((differences_row)**2)
-                    smoothness_loss_col = torch.sum((differences_col)**2)
-                    smoothness_loss = smoothness_loss_row + smoothness_loss_col
+                    v00 = depth_patch[:-1, :-1]
+                    v01 = depth_patch[:-1, 1:]
+                    v10 = depth_patch[1:, :-1]
+                    smoothness_loss = (torch.sum(((v00 - v01) ** 2) + ((v00 - v10) ** 2))).item()
                     loss += smoothness_loss * self.C(self.config.system.loss.lambda_depth_smoothness)
+                    
                     
                     #NOTE: Transient noise regularizer
                     transient_noise_loss = transient_patch[transient_patch<1e-7].sum()

@@ -233,19 +233,9 @@ class BaselineNeusSystem(BaseSystem):
                 v00 = depth_patch[:-1, :-1]
                 v01 = depth_patch[:-1, 1:]
                 v10 = depth_patch[1:, :-1]
-                smoothness_loss = ((v00 - v01) ** 2) + ((v00 - v10) ** 2)
+                smoothness_loss = (torch.sum(((v00 - v01) ** 2) + ((v00 - v10) ** 2))).item()
                 loss += smoothness_loss * self.C(self.config.system.loss.lambda_depth_smoothness)
                 
-        #Plot the predicted and gt images on top of each other
-        if not self.global_step % 1000:
-            alive_ray_mask = out["rays_valid"]
-            self.save_sdf_normal_plot(f"it{self.global_step}-sdf_depth_plot", out["sdf_samples"], out["distances_from_origin"],out["depth"][alive_ray_mask], out["ray_indices"], alive_ray_mask)
-
-        # update train_num_rays
-        if self.config.model.dynamic_ray_sampling:
-            train_num_rays = int(self.train_num_rays * (self.train_num_samples / out['num_samples_full'].sum().item()))        
-            self.train_num_rays = min(int(self.train_num_rays * 0.9 + train_num_rays * 0.1), self.config.model.max_train_num_rays)
-
         loss_rgb_mse = F.mse_loss(out['comp_rgb_full'][out['rays_valid_full'][...,0]], batch['rgb'][out['rays_valid_full'][...,0]])
         self.log('train/loss_rgb_mse', loss_rgb_mse)
         loss += loss_rgb_mse * self.C(self.config.system.loss.lambda_rgb_mse)

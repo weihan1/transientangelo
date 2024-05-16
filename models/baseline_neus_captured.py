@@ -82,7 +82,12 @@ class NeuSModel(BaseModel):
         self.tfilter_sigma = 3
         self.epsilon_max=1.5
         self.epsilon_min = 0.025
-        self.near_plane, self.far_plane=None, None
+        self.near_plane = self.near_plane_regnerf = 0
+        self.far_plane= self.far_plane_regnerf = 10
+        self.midplane = (self.near_plane + self.far_plane) / 2
+        self.near_init =self.midplane + 0.2*(self.near_plane-self.midplane)
+        self.far_init = self.midplane + 0.2*(self.far_plane-self.midplane)
+        
         
     def update_step(self, epoch, global_step):
         update_module_step(self.geometry, epoch, global_step) #Doesn't update anything 
@@ -210,14 +215,14 @@ class NeuSModel(BaseModel):
 
         return out
 
-    def forward_regnerf(self, unseen_rays):
+    def forward_regnerf(self, unseen_rays, global_step):
         n_rays = unseen_rays.shape[0]
         rays_o, rays_d = unseen_rays[:, 0:3], unseen_rays[:, 3:6] # both (N_rays, 3)
         result = {}
-        #if self.config.space_annealing:
-            #self.eta = min(max(self.global_step/256, 0.5))
-            #self.near_plane = self.midplane + (self.near_plane - self.midplane)*self.eta
-            #self.far_plane = self.midplane + (self.far_plane - self.midplane)*self.eta
+        if self.config.space_annealing:
+            self.eta = min(global_step/256, 1.0)
+            self.near_plane_regnerf = max(self.near_init + (self.near_plane_regnerf - self.midplane) * self.eta, 0)
+            self.far_plane_regnerf = min(self.far_init + (self.far_plane_regnerf - self.midplane)*self.eta, 100)
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(
                 rays_o, rays_d,
@@ -259,16 +264,15 @@ class NeuSModel(BaseModel):
                     "num_samples_regnerf": len(ray_indices)})
         return result
     
-    def forward_(self, rays):
+    def forward_(self, rays, global_step):
         n_rays = rays.shape[0]
         rays_o, rays_d = rays[:, 0:3], rays[:, 3:6] # both (N_rays, 3)
 
-        #TODO: implement space annealing sampling. Midplane is fixed to be 500
-        #if self.config.space_annealing:
-            #self.eta = min(max(self.global_step/256, 0.5))
-            #self.near_plane = self.midplane + (self.near_plane - self.midplane)*self.eta
-            #self.far_plane = self.midplane + (self.far_plane - self.midplane)*self.eta
-        
+        if self.config.space_annealing:
+            self.eta = min(global_step/256, 1.0)
+            self.near_plane = max(self.near_init + (self.near_plane - self.midplane) * self.eta, 0)
+            self.far_plane = min(self.far_init + (self.far_plane - self.midplane)*self.eta, 100)
+            
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(
                 rays_o, rays_d,
@@ -368,12 +372,15 @@ class NeuSModel(BaseModel):
             out = {}
             if self.config.use_reg_nerf:
                 regnerf_patch = rays_dict["regnerf_patch"]["rays"]
-                regnerf_out = self.forward_regnerf(regnerf_patch)
+                regnerf_out = self.forward_regnerf(regnerf_patch, global_step)
                 out.update(regnerf_out)
-            out.update(self.forward_(training_rays))
+            out.update(self.forward_(training_rays, global_step))
         elif stage == "validation":
-            regnerf_rays = rays_dict["regnerf_patch"]["rays"]
-            out = chunk_batch(self.forward_, self.config.ray_chunk, True, regnerf_rays, global_step)
+            if self.config.use_reg_nerf:
+                regnerf_rays = rays_dict["regnerf_patch"]["rays"]
+                out = chunk_batch(self.forward_, self.config.ray_chunk, True, regnerf_rays, global_step)
+            else:
+                out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays, global_step)
         elif stage == "test":
             out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays, global_step)
         return {
