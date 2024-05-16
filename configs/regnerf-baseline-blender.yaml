@@ -150,7 +150,7 @@ system:
     lambda_curvature: 0.0
     lambda_distortion: 0.
     lambda_opaque: 0.0 
-    lambda_depth_smoothness: 1.e-3
+    lambda_depth_smoothness: 0.1
     lambda_transient_noise: 0.0
     lambda_argmax_consistency: 0.0
     lambda_regnerf_sparse_depth_variance: 0.0
@@ -208,7 +208,7 @@ trainer:
   max_steps: 250000
   log_every_n_steps: 100
   num_sanity_val_steps: 0
-  val_check_interval: 10000
+  val_check_interval: 100000
   limit_train_batches: 1.0
   limit_val_batches: 3 #NOTE: change this to limit the number of iterations for validation
   enable_progress_bar: true

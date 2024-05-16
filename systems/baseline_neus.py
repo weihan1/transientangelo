@@ -10,6 +10,7 @@ import math
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
 
+import imageio
 import models
 from models.utils import cleanup
 from models.ray_utils import get_rays, generate_unseen_poses, find_surface_points
@@ -122,7 +123,7 @@ class BaselineNeusSystem(BaseSystem):
             
             if self.config.model.use_reg_nerf:
                 #NOTE: the regnerf patch rays are always concatenated at the end
-                patch_size = self.config.model.train_patch_size 
+                patch_size = 512
                 n_sparse_rays = self.config.model.sparse_rays_size
                 img_wh = self.dataset.w, self.dataset.h
                 regnerf_x, regnerf_y, unseen_rotation_matrix, unseen_translation_vector = generate_unseen_poses(patch_size, img_wh, self.dataset.all_c2w, n_sparse_rays=n_sparse_rays, 
@@ -171,7 +172,10 @@ class BaselineNeusSystem(BaseSystem):
         )
         
         if self.config.model.use_reg_nerf:
-            regnerf_rays_d = (camera_dirs[-self.config.model.train_patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1) #upper left corner of the c2w     
+            if stage in ["train"]:
+                regnerf_rays_d = (camera_dirs[-self.config.model.train_patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1) 
+            elif stage in ["validation"]:
+                regnerf_rays_d = (camera_dirs[-512**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1)
             unseen_rays_o = torch.broadcast_to(unseen_translation_vector, regnerf_rays_d.shape).to(self.rank).float()
             unseen_rays = torch.cat([unseen_rays_o, F.normalize(regnerf_rays_d, p=2, dim=-1)], dim=-1).float() #(self.patch_size**2 + sparse_rays, 6)
             rays_dict.update({"regnerf_patch": {'rays': unseen_rays, 'rotation_matrix': unseen_rotation_matrix}})
@@ -187,6 +191,8 @@ class BaselineNeusSystem(BaseSystem):
             self.print("Training rays has been added!")
         
         rays_dict.update({"global_step": self.global_step})
+        rays_dict.update({"stage": stage})
+        
         
         if self.config.model.background_color == 'white':
             self.model.background_color = torch.ones((3,), dtype=torch.float32, device=self.rank)
@@ -387,7 +393,7 @@ class BaselineNeusSystem(BaseSystem):
         depth = out["depth"].numpy().reshape(H,W)
         opacity = out["opacity"].numpy().reshape(H,W)
 
-        depth_image = depth*opacity   
+        depth_image = depth
         
         mask = (gt_pixs.sum(-1) > 0) # (H,W)
         
@@ -411,20 +417,20 @@ class BaselineNeusSystem(BaseSystem):
         
         #NOTE: here gt_pixs is already gamma corrected, so we instead raise it to the power of 2.2 and then multiply by view scale and then divide by dataset scale
         rgb_image = rgb 
-        ground_truth_image = gt_pixs
+        data_image = gt_pixs
         
     
         # #5. MSE between transient images vs predicted images
         # # mse = self.criterions["MSE"](torch.from_numpy(data_image), torch.from_numpy(rgb_image))
         
         # #6. PSNR between transient images vs predicted images
-        psnr = self.criterions["psnr"](torch.from_numpy(ground_truth_image), torch.from_numpy(rgb_image))
+        psnr = self.criterions["psnr"](torch.from_numpy(data_image), torch.from_numpy(rgb_image))
         
         # #7. SSIM between transient images vs predicted images
-        ssim = torch.tensor(self.criterions["SSIM"](ground_truth_image, rgb_image), dtype=torch.float64)
+        ssim = torch.tensor(self.criterions["SSIM"](data_image, rgb_image), dtype=torch.float64)
         
         # #8. LPIPS between transient images vs predicted images
-        lpips = torch.tensor(self.criterions["LPIPS"](ground_truth_image, rgb_image), dtype=torch.float64)
+        lpips = torch.tensor(self.criterions["LPIPS"](data_image, rgb_image), dtype=torch.float64)
         
         
         # #9. KL divergence between transient images normalized vs predicted images normalized
@@ -432,10 +438,16 @@ class BaselineNeusSystem(BaseSystem):
         
         #Preprocess the exr_depth to have a black background
         exr_depth[exr_depth == exr_depth[0][0]] = 0
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=2.5, vmax=5.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array.png"), depth)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array.png"), rgb)
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image*255.0).astype(np.uint8))
         
         self.save_image_plot_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
-            {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
+            {'type': 'rgb', 'img': data_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
             {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":2.5, "vmax":5.5},},
             {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":2.5, "vmax":5.5},},
         ])

@@ -5,11 +5,11 @@ from torch_efficient_distloss import flatten_eff_distloss
 import numpy as np
 from scipy.ndimage import correlate1d
 import os
-
+import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
 from pytorch_lightning.loggers import TensorBoardLogger
-
+import imageio
 
 import models
 from models.ray_utils import get_rays, spatial_filter, generate_unseen_poses
@@ -448,8 +448,8 @@ class CapturedNeuSSystem(BaseSystem):
         rgb_image = torch.from_numpy(rgb.sum(axis=-2))
         rgb_image = (rgb_image*self.dataset.transient_scale/self.dataset.div_vals[self.config.dataset.scene]) ** (1 / 2.2)
         
-        ground_truth_image = torch.from_numpy(gt_pixs.sum(axis=-2))
-        ground_truth_image = ((scaling * ground_truth_image/self.dataset.div_vals[self.config.dataset.scene]) ** (1 / 2.2)).to(torch.float64)
+        data_image = torch.from_numpy(gt_pixs.sum(axis=-2))
+        data_image = ((scaling * data_image/self.dataset.div_vals[self.config.dataset.scene]) ** (1 / 2.2)).to(torch.float64)
     
         # #4. MSE between transient images vs predicted images
         # mse = self.criterions["MSE"](ground_truth_image.cpu(), rgb_image)
@@ -458,18 +458,25 @@ class CapturedNeuSSystem(BaseSystem):
         iou = self.criterions["Transient_IOU"](rgb, gt_pixs)
         
         #5. PSNR between transient images vs predicted images
-        psnr = self.criterions["psnr"](ground_truth_image.cpu(), rgb_image)
+        psnr = self.criterions["psnr"](data_image.cpu(), rgb_image)
         
         #7. SSIM between transient images vs predicted images
-        ssim = torch.tensor(self.criterions["SSIM"](ground_truth_image.detach().cpu().numpy(), rgb_image.detach().cpu().numpy()), dtype=torch.float64)
+        ssim = torch.tensor(self.criterions["SSIM"](data_image.detach().cpu().numpy(), rgb_image.detach().cpu().numpy()), dtype=torch.float64)
         
         #8. LPIPS between transient images vs predicted images
-        lpips = torch.tensor(self.criterions["LPIPS"](ground_truth_image.detach().cpu().numpy(), rgb_image.detach().cpu().numpy()), dtype=torch.float64)
+        lpips = torch.tensor(self.criterions["LPIPS"](data_image.detach().cpu().numpy(), rgb_image.detach().cpu().numpy()), dtype=torch.float64)
         #9. KL divergence between transient images normalized vs predicted images normalized
+        
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=2.5, vmax=5.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image*255.0).astype(np.uint8))
         
         self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {'data_format': 'HWC'}},
-            {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {'data_format': 'HWC'}},
+            {'type': 'rgb', 'img': data_image, 'kwargs': {'data_format': 'HWC'}},
             {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
             {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
         ])

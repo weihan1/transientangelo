@@ -263,11 +263,13 @@ def bins_to_depth_mitsuba(bin_numbers, exposure_time):
     times= times/2
     return times 
 
-def get_depth_from_transient_captured(transient, laser_kernel, exposure_time):
-    lm = correlate1d(transient[..., 0],laser_kernel, axis=-1)
+def get_depth_from_transient_captured(transient, laser, exposure_time, mask=None):
+    lm = correlate1d(transient[..., 0], laser, axis=-1)
     exr_depth = np.argmax(lm, axis=-1)
     exr_depth = (exr_depth*2*exposure_time)/2
-    
+
+    if mask is not None:
+        exr_depth[mask==0] = 0  
     return exr_depth    
     
 

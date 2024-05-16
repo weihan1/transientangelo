@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 
 import datasets
-from models.ray_utils import get_ray_directions, find_mean_focus_point, LearnRays, compute_normals
+from models.ray_utils import get_ray_directions, find_mean_focus_point, LearnRays, compute_normals_from_transient_captured
 from utils.misc import get_rank
 from systems.criterions import get_depth_from_transient, get_depth_from_transient_captured
 import h5py
@@ -88,12 +88,7 @@ class BaselineDatasetCapturedBase():
         self.num_views = self.config.num_views
         self.all_images = np.zeros((len(meta['frames']), 512, 512, 1500, 3))
         self.all_c2w = np.zeros((len(meta['frames']), 4, 4))
-        
-        if self.config.use_gt_depth_normal and self.split == 'train':
-            print("Calculating the ground truth depth and normals...🤖")
-            self.all_depths = get_depth_from_transient_captured(self.all_images, 0.01, 3, self.all_fg_masks if self.config.use_mask else None).reshape(-1, self.h, self.w)
-            self.all_normals = compute_normals(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
-
+        self.all_fg_masks = np.zeros((len(meta['frames']), 512, 512))
         
         
         exposure_time = 299792458*4e-12
@@ -110,7 +105,7 @@ class BaselineDatasetCapturedBase():
         del Y
         del Z
         
-        
+        self.K = LearnRays(self.rays, device=self.rank, img_shape=self.img_wh).to(self.rank)
         if self.split == "train" or self.split == "test":
             for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
                 number = int(frame["file_path"].split("_")[-1])
@@ -124,6 +119,10 @@ class BaselineDatasetCapturedBase():
                 rgba = torch.clip(rgba, 0, None)      
                 rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)      
                 self.all_images[i] = rgba[...,:3]
+                if self.config.use_mask:
+                    mask_dir = os.path.join(self.config.root_dir, f"train_{number:03d}_mask.png")
+                    mask = cv2.imread(mask_dir, cv2.IMREAD_GRAYSCALE)
+                    self.all_fg_masks[i] = mask
                 
             
             self.all_images = torch.from_numpy(self.all_images)
@@ -147,7 +146,16 @@ class BaselineDatasetCapturedBase():
             camera_angle_x = float(meta["camera_angle_x"])
             self.focal = 0.5 * self.w / np.tan(0.5 * camera_angle_x)
             
-        self.K = LearnRays(self.rays, device=self.rank, img_shape=self.img_wh).to(self.rank)
+        if self.config.use_gt_depth_normal and self.split == 'train':
+            try:
+                print("Loading saved depth")
+                self.all_depths = np.load(f"{self.scene}-{self.num_views}-depths.npy")
+            except:
+                print("No depth found...Calculating the ground truth depth and normals...🤖")
+                self.all_depths = get_depth_from_transient_captured(self.all_images, self.laser.cpu().numpy(), self.exposure_time, self.all_fg_masks if self.config.use_mask else None)
+            self.all_normals = compute_normals_from_transient_captured(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
+
+        
         #NOTE: Finding the mean focus point
         print(f"Finding mean focus point for {self.split} 🤔")
         known_rotation_matrices = self.all_c2w[:,:3,:3]

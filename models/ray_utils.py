@@ -493,6 +493,31 @@ def get_rays_from_images(K, c2w):
 
 
 
+def get_rays_captured_from_images(K, c2w):
+    
+    x, y = torch.meshgrid(
+        torch.arange(512),
+        torch.arange(512),
+        indexing="xy",
+    )
+    
+    x = x.flatten()
+    y = y.flatten()
+    x = x.to(K.rays)
+    y = y.to(K.rays)
+    dirs = K(x, y) 
+    
+    directions = (dirs[:,None, None, :] * c2w[:, :3, :3].to(dirs)).sum(dim=-1)
+    directions = directions.permute(1,0,2)
+    origins = torch.broadcast_to(c2w[:, None, :3, -1], directions.shape)
+    viewdirs = directions / torch.linalg.norm(
+        directions, dim=-1, keepdims=True
+    )
+
+    origins = torch.reshape(origins, (c2w.shape[0], 512, 512, 3))
+    viewdirs = torch.reshape(viewdirs, (c2w.shape[0], 512, 512, 3))
+    return origins, viewdirs
+
 def compute_normals(depth_map, K, c2w):
     '''Compute the normals from the depth map using camera intrinsics.'''
     n, h, w = depth_map.shape
@@ -503,6 +528,26 @@ def compute_normals(depth_map, K, c2w):
 
     # Compute 3D points
     points = (depth_map * viewdirs + origins).reshape(n, h, w, 3)
+    padded = torch.nn.functional.pad(points, (0, 0, 1, 1, 1, 1), mode='replicate')
+    g_x = (padded[:, 2:, 1:-1] - padded[:, :-2, 1:-1]) / 2 #each of these terms is of shape (n, 512,512,3)
+    g_y = (padded[:, 1:-1, 2:] - padded[:, 1:-1, :-2]) / 2
+    N = torch.cross(g_x, g_y, dim=-1)
+    N_norm = torch.linalg.norm(N, dim=-1, keepdim=True)
+    N_normalized = N / torch.where(N_norm == 0, torch.ones_like(N_norm), N_norm)
+    
+    return N_normalized
+
+
+
+def compute_normals_from_transient_captured(depth_map, K, c2w):
+    '''Compute the normals from the depth map for the captured dataset'''
+    n, h, w = depth_map.shape
+    origins, viewdirs = get_rays_captured_from_images(K, c2w)
+    
+    depth_map = torch.from_numpy(depth_map).reshape(n, h, w, 1)
+
+    # Compute 3D points
+    points = (depth_map * viewdirs.to(origins) + origins).reshape(n, h, w, 3)
     padded = torch.nn.functional.pad(points, (0, 0, 1, 1, 1, 1), mode='replicate')
     g_x = (padded[:, 2:, 1:-1] - padded[:, :-2, 1:-1]) / 2 #each of these terms is of shape (n, 512,512,3)
     g_y = (padded[:, 1:-1, 2:] - padded[:, 1:-1, :-2]) / 2

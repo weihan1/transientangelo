@@ -9,7 +9,7 @@ import math
 from scipy.ndimage import correlate1d
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
-
+import imageio
 import models
 from models.utils import cleanup
 from models.ray_utils import get_rays, spatial_filter, generate_unseen_poses, find_surface_points
@@ -176,6 +176,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
             self.print("Training rays has been added!")
         
         rays_dict.update({"global_step": self.global_step})
+        rays_dict.update({"stage": stage})
         
         if self.config.model.background_color == 'white':
             self.model.background_color = torch.ones((3,), dtype=torch.float32, device=self.rank)
@@ -210,9 +211,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
                 'laser_kernel': self.dataset.laser_kernel,
                 'gt_transient': gt_transient
             })
-    
-    
-    
     
     
     def training_step(self, batch, batch_idx):
@@ -407,7 +405,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
         depth = out["depth"].numpy().reshape(H,W)
         opacity = out["opacity"].numpy().reshape(H,W)
         
-        depth_image = depth*opacity   
+        depth_image = depth
         
         mask = (gt_pixs.sum(-1) > 0) # (H,W
         # #1. Calculate the L1 and MSE error b/w rendered depth vs gt depths (gt depths can be extracted using the get_gt_depth function)
@@ -427,20 +425,20 @@ class BaselineNeusCapturedSystem(BaseSystem):
         #4. Transient IOU
         
         rgb_image = rgb
-        ground_truth_image = gt_pixs
+        data_image = gt_pixs
         
     
         # #5. MSE between transient images vs predicted images
         # # mse = self.criterions["MSE"](torch.from_numpy(data_image), torch.from_numpy(rgb_image))
         
         # #6. PSNR between transient images vs predicted images
-        psnr = self.criterions["psnr"](torch.from_numpy(ground_truth_image), torch.from_numpy(rgb_image))
+        psnr = self.criterions["psnr"](torch.from_numpy(data_image), torch.from_numpy(rgb_image))
         
         # #7. SSIM between transient images vs predicted images
-        ssim = torch.tensor(self.criterions["SSIM"](ground_truth_image, rgb_image), dtype=torch.float64)
+        ssim = torch.tensor(self.criterions["SSIM"](data_image, rgb_image), dtype=torch.float64)
         
         # #8. LPIPS between transient images vs predicted images
-        lpips = torch.tensor(self.criterions["LPIPS"](ground_truth_image, rgb_image), dtype=torch.float64)
+        lpips = torch.tensor(self.criterions["LPIPS"](data_image, rgb_image), dtype=torch.float64)
         
         
         # #9. KL divergence between transient images normalized vs predicted images normalized
@@ -451,11 +449,17 @@ class BaselineNeusCapturedSystem(BaseSystem):
         
         self.save_image_plot_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
-            {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
+            {'type': 'rgb', 'img': data_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
             {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
             {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
         ])
         
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=2.5, vmax=5.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image*255.0).astype(np.uint8))
         
         W, H = self.dataset.img_wh
         

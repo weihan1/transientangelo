@@ -334,7 +334,12 @@ class CapturedNeRFSystem(BaseSystem):
         #8. LPIPS between transient images vs predicted images
         lpips = torch.tensor(self.criterions["LPIPS"](ground_truth_image.detach().cpu().numpy(), rgb_image.detach().cpu().numpy()), dtype=torch.float64)
         #9. KL divergence between transient images normalized vs predicted images normalized
-        
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=2.5, vmax=5.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image*255.0).astype(np.uint8))
         self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {'data_format': 'HWC'}},
             {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {'data_format': 'HWC'}},

@@ -362,6 +362,8 @@ class NeuSModel(BaseModel):
         in the form of {something_rays: {"rays": rays, "metadata": metadata}}
         '''
         training_rays = rays_dict["training_rays"]["rays"]
+        global_step = rays_dict["global_step"]
+        stage = rays_dict["stage"]
         if self.training:
             out = {}
             if self.config.use_reg_nerf:
@@ -369,8 +371,11 @@ class NeuSModel(BaseModel):
                 regnerf_out = self.forward_regnerf(regnerf_patch)
                 out.update(regnerf_out)
             out.update(self.forward_(training_rays))
-        else:
-            out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays)
+        elif stage == "validation":
+            regnerf_rays = rays_dict["regnerf_patch"]["rays"]
+            out = chunk_batch(self.forward_, self.config.ray_chunk, True, regnerf_rays, global_step)
+        elif stage == "test":
+            out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays, global_step)
         return {
             **out,
             'inv_s': self.variance.inv_s

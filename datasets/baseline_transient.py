@@ -123,7 +123,6 @@ class BaselineDatasetBase():
                 print(f"Using downsampled version of shape {self.w, self.h}")
                 self.all_images = (self.all_images[:,1::2, ::2] + self.all_images[:,::2, ::2] + self.all_images[:,::2, 1::2] + self.all_images[:,1::2, 1::2])/4
                                                                                                                 
-            
         else: #For validation
             for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
                 c2w = torch.from_numpy(np.array(frame['transform_matrix']))
