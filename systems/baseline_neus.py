@@ -229,12 +229,11 @@ class BaselineNeusSystem(BaseSystem):
             #NOTE: This loss is used when reproducing regnerf
             if out["num_samples_regnerf"] > 0:
                 #Depth smoothness regularizer
-                depth_patch = out["depth_patch"]
-                differences_row = depth_patch[:, 1:] - depth_patch[:, :-1] 
-                differences_col = depth_patch[1:, :] - depth_patch[:-1, :]
-                smoothness_loss_row = torch.sum((differences_row)**2)
-                smoothness_loss_col = torch.sum((differences_col)**2)
-                smoothness_loss = smoothness_loss_row + smoothness_loss_col
+                depth_patch = out["depth_patch"].reshape(self.config.model.train_patch_size, self.config.model.train_patch_size)
+                v00 = depth_patch[:-1, :-1]
+                v01 = depth_patch[:-1, 1:]
+                v10 = depth_patch[1:, :-1]
+                smoothness_loss = ((v00 - v01) ** 2) + ((v00 - v10) ** 2)
                 loss += smoothness_loss * self.C(self.config.system.loss.lambda_depth_smoothness)
                 
         #Plot the predicted and gt images on top of each other

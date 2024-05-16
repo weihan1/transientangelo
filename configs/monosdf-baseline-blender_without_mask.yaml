@@ -27,7 +27,7 @@ dataset:
 model:
   name: baseline-neus
   radius: 1.5 
-  num_samples_per_ray: 4096
+  num_samples_per_ray: 1024
   train_num_rays: 512
   max_train_num_rays: 8192
   grid_prune: true

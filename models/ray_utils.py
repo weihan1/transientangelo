@@ -199,33 +199,19 @@ def vectorized_distance_point_from_line(point, origins, directions):
     return distances
     
 
-def find_mean_focus_point(known_camera_locations, optical_axes, initial_guess):
-    '''
-    Find the mean focus point from regnerf using known optical axes.
-    Logic is as follows:
+def find_mean_focus_point_regnerf(known_camera_locations, optical_axes):
+    origins, directions = known_camera_locations[...,None], optical_axes[...,None]
+    eye = torch.eye(3)
+    m = eye - directions * directions.permute(0, 2, 1)
+    mt_m = m.permute(0, 2, 1) @ m
+    mt_m_mean = mt_m.mean(dim=0)
+    origins_mean = (mt_m @ origins).mean(dim=0)
+
+    # Solve for the focus point
+    focus_pt = torch.linalg.solve(mt_m_mean, origins_mean).squeeze(-1)
     
-    1. Given known camera locations, define ith ray r_i(t) = o_i + t*_di
-    2. Start with some initial guess for the focus point 
-    3. Calculate the distances of the focus point to the optical axes by projecting the focus point onto each optical axes and calculating the distance
-    4. Add all distances
-    5. Update the focus point by minimizing the sum of distances using solver
-    '''
-    
-    #transform the known camera locations and optical axes to numpy
-    known_camera_locations = known_camera_locations.cpu().numpy()
-    optical_axes = optical_axes.cpu().numpy()
-    
-    def objective_function(point):
-        '''
-        Calculate the total cost of the point to the optical axes
-        '''
-        distances = vectorized_distance_point_from_line(point, known_camera_locations, optical_axes)
-        total_cost = np.sum(distances)
-        return total_cost
-        
-    result = minimize(objective_function, initial_guess)
-    return torch.tensor(result.x)
-    
+    return focus_pt
+
 def generate_unseen_poses(patch_size, img_wh, c2w, n_sparse_rays, bounding_form, mean_focus_point, write_poses=False, captured=False, sample_boundary=True):
     '''
     Generate a random pose following https://arxiv.org/pdf/2112.00724v1.pdf RegNerf from known poses c2w.

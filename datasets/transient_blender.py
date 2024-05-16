@@ -17,7 +17,7 @@ import cv2
 import pytorch_lightning as pl
 
 import datasets
-from models.ray_utils import get_ray_directions, find_mean_focus_point
+from models.ray_utils import get_ray_directions, find_mean_focus_point_regnerf
 from utils.misc import get_rank
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -162,7 +162,7 @@ class TransientDatasetBase():
         known_rotation_matrices = self.all_c2w[:,:3,:3]
         optical_axes = known_rotation_matrices[...,2]
         known_camera_locations = self.all_c2w[:, :3, -1]
-        self.mean_focus_point = find_mean_focus_point(known_camera_locations, optical_axes, np.array([0,0,0]))
+        self.mean_focus_point = find_mean_focus_point_regnerf(known_camera_locations, optical_axes)
         print(f"The mean focus point is {self.mean_focus_point.tolist()} 🤓")
         
 class TransientDataset(Dataset, TransientDatasetBase):

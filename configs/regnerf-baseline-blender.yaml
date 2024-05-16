@@ -27,7 +27,7 @@ dataset:
 model:
   name: baseline-neus
   radius: 1.5 
-  num_samples_per_ray: 4096
+  num_samples_per_ray: 1024
   train_num_rays: 512
   max_train_num_rays: 8192
   grid_prune: true
@@ -39,8 +39,8 @@ model:
   use_reg_nerf: true
   train_patch_size: 8 #Only used if regnerf is used - patch size is the length of the side of the square patch, NOT the number of pixels
   sparse_rays_size: 0 #Only used if regnerf is used - number of sparse rays that we sample from the unknown poses
-  bounding_form: box #only used if regnerf is used - sphere or box
-  sample_boundary: false #only used if regnerf is used - sample rays from the boundary or including the interior
+  bounding_form: sphere #only used if regnerf is used - sphere or box
+  sample_boundary: true #only used if regnerf is used - sample rays from the boundary or including the interior
   write_poses: false
   use_depth_variance_weight: false
   randomized: true

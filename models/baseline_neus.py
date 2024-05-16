@@ -264,6 +264,15 @@ class NeuSModel(BaseModel):
                     "num_samples_regnerf": len(ray_indices)})
         return result
 
+        mid = near_final + mid_perc * (far_final - near_final)
+
+        near_init = mid + init_perc * (near_final - mid)
+        far_init = mid + init_perc * (far_final - mid)
+
+        weight = min(it * 1.0 / n_steps, 1.0)
+
+        near_i = near_init + weight * (near_final - near_init)
+        far_i = far_init + weight * (far_final - far_init)
 
     def forward_(self, rays, global_step):
         n_rays = rays.shape[0]

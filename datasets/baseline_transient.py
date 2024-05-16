@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 
 import datasets
-from models.ray_utils import get_ray_directions, find_mean_focus_point, compute_normals
+from models.ray_utils import get_ray_directions, compute_normals, find_mean_focus_point_regnerf
 from utils.misc import get_rank
 from systems.criterions import get_depth_from_transient
 import h5py
@@ -153,9 +153,9 @@ class BaselineDatasetBase():
         known_rotation_matrices = self.all_c2w[:,:3,:3]
         optical_axes = known_rotation_matrices[...,2]
         known_camera_locations = self.all_c2w[:, :3, -1]
-        self.mean_focus_point = find_mean_focus_point(known_camera_locations, optical_axes, np.array([0,0,0]))
+        self.mean_focus_point = find_mean_focus_point_regnerf(known_camera_locations, optical_axes)
         print(f"The mean focus point is {self.mean_focus_point.tolist()} 🤓")
-        
+        print(f"its average distance to existing camera locations is {np.mean(np.linalg.norm(known_camera_locations - self.mean_focus_point, axis=-1))} 📏")
         
         
 class BaselineDataset(Dataset, BaselineDatasetBase):
