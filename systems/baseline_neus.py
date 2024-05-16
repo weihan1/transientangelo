@@ -171,16 +171,14 @@ class BaselineNeusSystem(BaseSystem):
         value=(-1.0 if self.dataset.OPENGL_CAMERA else 1.0),
         )
         
-        if self.config.model.use_reg_nerf:
-            if stage in ["train"]:
-                regnerf_rays_d = (camera_dirs[-self.config.model.train_patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1) 
-            elif stage in ["validation"]:
-                regnerf_rays_d = (camera_dirs[-512**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1)
-            unseen_rays_o = torch.broadcast_to(unseen_translation_vector, regnerf_rays_d.shape).to(self.rank).float()
-            unseen_rays = torch.cat([unseen_rays_o, F.normalize(regnerf_rays_d, p=2, dim=-1)], dim=-1).float() #(self.patch_size**2 + sparse_rays, 6)
+        if self.config.model.use_reg_nerf and stage not in ["test"]:
+            patch_size = self.config.model.train_patch_size if stage == "train" else 512
+            regnerf_rays_d = (camera_dirs[-patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1)
+            unseen_rays_o = unseen_translation_vector.expand_as(regnerf_rays_d).to(self.rank).float()
+            unseen_rays = torch.cat([unseen_rays_o, F.normalize(regnerf_rays_d, p=2, dim=-1)], dim=-1).float()
             rays_dict.update({"regnerf_patch": {'rays': unseen_rays, 'rotation_matrix': unseen_rotation_matrix}})
             if self.trainer.global_step == 1:
-                self.print("Regnerf patch rays has been added!")
+                self.print("Regnerf patch rays have been added!")
 
         #NOTE: The first x.shape[0] rays are always the training rays
         rays_d = (camera_dirs[:x.shape[0], None, :] * c2w[:, :3, :3].to(self.rank)).sum(dim=-1) #upper left corner of the c2w
