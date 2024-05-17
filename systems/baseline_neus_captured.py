@@ -252,7 +252,7 @@ class BaselineNeusCapturedSystem(BaseSystem):
         comp_normal = out['comp_normal']
         
         if self.config.dataset.use_gt_depth_normal:        
-            loss_depth_consistency = F.mse_loss((predicted_depth[valid_rays[...,0]])[...,0], groundtruth_depth[valid_rays[...,0]]**2)
+            loss_depth_consistency = F.mse_loss((predicted_depth[valid_rays[...,0]])[...,0], groundtruth_depth[valid_rays[...,0]])
             loss += loss_depth_consistency * self.C(self.config.system.loss.lambda_depth_consistency)
             first_term = F.l1_loss(comp_normal[valid_rays[...,0]], batch["ground_truth_normals"][valid_rays[...,0]])
             dot_prod = (comp_normal[valid_rays[...,0]]*batch["ground_truth_normals"][valid_rays[...,0]]).sum(-1)
@@ -446,6 +446,13 @@ class BaselineNeusCapturedSystem(BaseSystem):
         
         #Preprocess the exr_depth to have a black background
         exr_depth[exr_depth == exr_depth[0][0]] = 0
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=0.8, vmax=1.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=0.8, vmax=1.5)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image*255.0).astype(np.uint8))
+        
         
         self.save_image_plot_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
@@ -453,13 +460,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
             {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
             {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
         ])
-        
-        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=2.5, vmax=5.5)
-        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
-        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
-        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
-        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
-        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image*255.0).astype(np.uint8))
         
         W, H = self.dataset.img_wh
         
