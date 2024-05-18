@@ -466,8 +466,8 @@ class CapturedNeuSSystem(BaseSystem):
         lpips = torch.tensor(self.criterions["LPIPS"](data_image.detach().cpu().numpy(), rgb_image.detach().cpu().numpy()), dtype=torch.float64)
         #9. KL divergence between transient images normalized vs predicted images normalized
         
-        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=2.5, vmax=5.5)
-        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=0.8, vmax=1.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=0.8, vmax=1.5)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
