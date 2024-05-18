@@ -71,7 +71,6 @@ class BaselineDatasetCapturedBase():
         self.laser = torch.tensor(laser.copy()).float().to(self.rank)
         self.laser_kernel = torch_laser_kernel(self.laser, device=self.rank)
         
-        #Maybe the best way to do testing is to still split it into two 
         if self.split in ["train", "val"]:
             with open(os.path.join(self.config.root_dir, "final_cams", self.config.num_views + "_views", f"transforms_{self.split}.json"), 'r') as f:
                 meta = json.load(f)
@@ -152,7 +151,8 @@ class BaselineDatasetCapturedBase():
                 self.all_depths = np.load(f"{self.scene}-{self.num_views}-depths.npy")
             except:
                 print("No depth found...Calculating the ground truth depth and normals...🤖")
-                self.all_depths = get_depth_from_transient_captured(self.all_images, self.laser.cpu().numpy(), self.exposure_time, self.all_fg_masks if self.config.use_mask else None)
+                self.all_depths = get_depth_from_transient_captured(self.all_images, self.laser.cpu().numpy(), self.all_fg_masks if self.config.use_mask else None)
+                np.save(f"{self.scene}-{self.num_views}-depths.npy", self.all_depths)
             self.all_normals = compute_normals_from_transient_captured(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
 
         
