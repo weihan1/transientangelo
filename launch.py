@@ -49,7 +49,7 @@ def main():
     from utils.misc import load_config   
     import torch 
 
-    torch.set_float32_matmul_precision("high")
+    torch.set_float32_matmul_precision("medium")
     
     # parse YAML config to OmegaConf
     config = load_config(args.config, cli_args=extras)
@@ -97,9 +97,6 @@ def main():
                 **config.checkpoint
             ),
             LearningRateMonitor(logging_interval='step'),
-            CodeSnapshotCallback(
-                config.code_dir, use_version=False
-            ),
             ConfigSnapshotCallback(
                 config, config.config_dir, use_version=False
             ),

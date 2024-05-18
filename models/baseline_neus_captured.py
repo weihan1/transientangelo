@@ -83,7 +83,7 @@ class NeuSModel(BaseModel):
         self.epsilon_max=1.5
         self.epsilon_min = 0.025
         self.near_plane = self.near_plane_regnerf = 0
-        self.far_plane= self.far_plane_regnerf = 10
+        self.far_plane= self.far_plane_regnerf = 2
         self.midplane = (self.near_plane + self.far_plane) / 2
         self.near_init =self.midplane + 0.2*(self.near_plane-self.midplane)
         self.far_init = self.midplane + 0.2*(self.far_plane-self.midplane)
