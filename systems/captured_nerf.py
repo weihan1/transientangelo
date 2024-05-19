@@ -5,6 +5,8 @@ from torch_efficient_distloss import flatten_eff_distloss
 import numpy as np
 from scipy.ndimage import correlate1d
 import os
+import matplotlib.pyplot as plt
+import imageio
 
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
@@ -268,7 +270,6 @@ class CapturedNeRFSystem(BaseSystem):
         rank_zero_info("Exporting mesh...")
         self.export()
         rank_zero_info("Mesh finished exporting")
-        exit(1)
         rgb = np.zeros((H, W, self.dataset.n_bins,3))
         depth = np.zeros((H, W))
         opacity = np.zeros((H, W))
@@ -295,7 +296,7 @@ class CapturedNeRFSystem(BaseSystem):
         gt_pixs = gt_pixs.reshape(H, W, self.dataset.n_bins, 3)
         lm = correlate1d(gt_pixs[..., 0], self.dataset.laser.cpu().numpy(), axis=-1)
         exr_depth = np.argmax(lm, axis=-1)
-        exr_depth = (exr_depth*self.model.exposure_time)/2
+        exr_depth = (exr_depth*2*299792458*4e-12)/2
         mask = (gt_pixs.sum((-1, -2)) > 0) # (H,W)
         
         
@@ -339,7 +340,7 @@ class CapturedNeRFSystem(BaseSystem):
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
-        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image*255.0).astype(np.uint8))
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (ground_truth_image*255.0).astype(np.uint8))
         self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {'data_format': 'HWC'}},
             {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {'data_format': 'HWC'}},
