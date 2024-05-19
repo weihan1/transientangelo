@@ -9,7 +9,6 @@ import math
 import imageio
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
-
 import models
 from models.utils import cleanup
 from models.ray_utils import get_rays, spatial_filter, generate_unseen_poses, find_surface_points
@@ -285,7 +284,7 @@ class TransientNeuSSystem(BaseSystem):
                 if self.config.model.train_patch_size>0:
                     #NOTE: the following tensors are always used if patch regnerf is used 
                     color_patch = out["color_patch"]
-                    depth_patch = out["depth_patch"].reshape(self.config.model.trian_patch_size, self.config.model.train_patch_size)
+                    depth_patch = out["depth_patch"].reshape(self.config.model.train_patch_size, self.config.model.train_patch_size)
                     transient_patch = out["transient_patch"]
                     depth_variance_patch = out["depth_variance_patch"]
                     sdf_grad_samples = out["sdf_grad_samples"]
