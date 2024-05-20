@@ -42,7 +42,7 @@ model:
   sample_boundary: true
   write_poses: false #NOTE: set this to true to write poses to a json file for visualization
   randomized: true
-  ray_chunk: 2048
+  ray_chunk: 1024
   cos_anneal_end: ${trainer.max_steps}
   learned_background: false 
   background_color: black

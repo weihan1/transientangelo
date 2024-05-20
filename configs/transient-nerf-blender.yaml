@@ -1,5 +1,5 @@
 name: transient-nerf-blender-${dataset.scene}
-tag: "${dataset.scene}-${dataset.num_views}-views"
+tag: "${dataset.scene}-${dataset.num_views}-views-${dataset.scale_down_photon_factor}"
 seed: 42
 
 dataset:
@@ -33,7 +33,7 @@ model:
   batch_image_sampling: true
   multi_ray_shooting: true #Repeats multiple ray per pixel
   randomized: true
-  ray_chunk: 8192 #Decrease if OOM during validation/testing, powers of 2 e.g. 16384
+  ray_chunk: 16384 #Decrease if OOM during validation/testing, powers of 2 e.g. 16384
   learned_background: false
   background_color: black
   geometry:

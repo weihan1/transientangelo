@@ -142,7 +142,7 @@ system:
     lambda_mask: 0.0 
     lambda_eikonal: 1.e-1
     lambda_depth_consistency: 1.e-2
-    lambda_normal_consistency: 0.0
+    lambda_normal_consistency: 5.e-3
     lambda_weighted_eikonal: 0.0
     lambda_eikonal_patch: 0.0
     lambda_background_regularization: 0.0
@@ -206,7 +206,7 @@ export:
   num_samples: 2500000
 
 trainer:
-  max_steps: 250000
+  max_steps: 150000
   log_every_n_steps: 100
   num_sanity_val_steps: 0
   val_check_interval: 10000

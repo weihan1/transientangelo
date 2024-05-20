@@ -429,7 +429,7 @@ class CapturedNeuSSystem(BaseSystem):
         
         lm = correlate1d(gt_pixs[..., 0], self.dataset.laser.cpu().numpy(), axis=-1)
         exr_depth = np.argmax(lm, axis=-1)
-        exr_depth = (exr_depth*2*self.model.exposure_time)/2
+        exr_depth = (exr_depth*2*299792458*4e-12)/2
         mask = (gt_pixs.sum((-1, -2)) > 0) # (H,W)
         
         
