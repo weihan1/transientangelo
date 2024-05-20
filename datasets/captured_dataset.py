@@ -85,7 +85,7 @@ class CapturedDatasetBase():
                 meta = json.load(f)
                 
         else: #NOTE: the captured dataset test poses are in a separate folder 
-            with open(os.path.join(self.config.root_dir, "final_cams", "test_jsons", f"transforms_{self.split}2.json"), "r") as f:
+            with open(os.path.join(self.config.root_dir, "final_cams", "test_jsons", f"transforms_{self.split}.json"), "r") as f:
                 meta = json.load(f)
 
 
@@ -213,7 +213,7 @@ class CapturedDataModule(pl.LightningDataModule):
         sampler = None
         return DataLoader(
             dataset, 
-            num_workers=os.cpu_count(), 
+            num_workers=1, 
             batch_size=batch_size,
             pin_memory=True,
             sampler=sampler

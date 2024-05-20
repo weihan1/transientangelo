@@ -412,6 +412,7 @@ class CapturedNeuSModel(BaseModel):
         in the form of {something_rays: {"rays": rays, "metadata": metadata}}
         '''
         training_rays = rays_dict["training_rays"]["rays"]
+        stage = rays_dict["stage"]
         if self.training:
             out = {}
             if self.config.use_reg_nerf:
@@ -420,8 +421,13 @@ class CapturedNeuSModel(BaseModel):
                 out.update(regnerf_out)
                 
             out.update(self.forward_(training_rays, laser_kernel))
-
-        else: #validation or testing
+        if stage == "validation":
+            if self.config.use_reg_nerf:
+                regnerf_patch = rays_dict["regnerf_patch"]["rays"]
+                out = chunk_batch(self.forward_, self.config.ray_chunk, True, regnerf_patch, laser_kernel)
+            else:
+                out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays, laser_kernel)
+        elif stage =="test":
             out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays, laser_kernel)
         return {
             **out,

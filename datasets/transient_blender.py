@@ -109,12 +109,12 @@ class TransientDatasetBase():
                     
             else: #Low photon experiments
                 print("Starting the low photon experiments with scale equal to ", self.config.scale_down_photon_factor, "🔦")
-                scale_factor = self.config.scale_down_photon_factor
+                photon_level = self.config.scale_down_photon_factor
                 for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
                     c2w = torch.from_numpy(np.array(frame['transform_matrix']))
                     self.all_c2w[i] = c2w
                     number = int(frame["file_path"].split("_")[-1])
-                    transient_path = os.path.join(self.config.root_dir, "clean_transients", f"{split}_{number:03d}_sampled_{scale_factor}.h5")
+                    transient_path = os.path.join(self.config.root_dir, "clean_transients", f"{split}_{number:03d}_sampled_{photon_level}.h5")
                     rgba = read_h5(transient_path) #(h,w,1200,4)
                     rgba = torch.from_numpy(rgba)
                     rgba = torch.clip(rgba, 0, None)            
