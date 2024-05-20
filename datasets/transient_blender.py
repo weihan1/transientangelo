@@ -114,7 +114,7 @@ class TransientDatasetBase():
                     c2w = torch.from_numpy(np.array(frame['transform_matrix']))
                     self.all_c2w[i] = c2w
                     number = int(frame["file_path"].split("_")[-1])
-                    transient_path = os.path.join(self.config.root_dir, "clean_transients", f"{split}_{number:03d}_sampled_{photon_level}.h5")
+                    transient_path = os.path.join(self.config.root_dir, "clean_transients", f"train_{number:03d}_sampled_{photon_level}.h5")
                     rgba = read_h5(transient_path) #(h,w,1200,4)
                     rgba = torch.from_numpy(rgba)
                     rgba = torch.clip(rgba, 0, None)            
