@@ -387,8 +387,8 @@ class TransientNeuSModel(BaseModel):
                 alpha_thre=0.0
             )
         
-        if len(ray_indices) == 0 and self.training:
-            print("No samples found during training")
+        # if len(ray_indices) == 0 and self.training:
+        #     print("No samples found during training")
         
         ray_indices = ray_indices.long()
         t_origins = rays_o[ray_indices]
@@ -543,6 +543,7 @@ class TransientNeuSModel(BaseModel):
         in the form of {something_rays: {"rays": rays, "metadata": metadata}}
         '''
         training_rays = rays_dict["training_rays"]["rays"]
+        stage = rays_dict["stage"]
         if self.training:
             out = {}
             if self.config.use_reg_nerf:
@@ -551,7 +552,12 @@ class TransientNeuSModel(BaseModel):
                 out.update(regnerf_out)
                 
             out.update(self.forward_(training_rays))
-        else: #Validation
+        elif stage == "validation":
+            if self.config.use_reg_nerf:
+                regnerf_rays = rays_dict["regnerf_patch"]["rays"]
+                out = chunk_batch(self.forward_, self.config.ray_chunk, True, regnerf_rays)
+            out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays)
+        elif stage == "test":
             out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays)
         return {
             **out,

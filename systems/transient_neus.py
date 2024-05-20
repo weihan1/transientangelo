@@ -127,18 +127,18 @@ class TransientNeuSSystem(BaseSystem):
             
         elif stage in ["validation"]:
             #Selecting all tuples (x,y) of the image
-            x, y = torch.meshgrid(
+            train_x, train_y = torch.meshgrid(
                 torch.arange(self.dataset.w, device=self.dataset.all_c2w.device),
                 torch.arange(self.dataset.h, device=self.dataset.all_c2w.device),
                 indexing="xy",
             ) #(self.dataset.w, self.dataset.h)
-            x = x.flatten()
-            y = y.flatten()
+            train_x = train_x.flatten()
+            train_y = train_y.flatten()
             #NOTE: because there's no spatial filter, no need to set the self.train_rep = 1
-            x = x.to(self.rank)
-            y = y.to(self.rank)
-            s_x = x
-            s_y = y
+            train_x = train_x.to(self.rank)
+            train_y = train_y.to(self.rank)
+            s_x = train_x
+            s_y = train_y
             if self.config.model.use_reg_nerf:
                 patch_size = 32
                 n_sparse_rays = self.config.model.sparse_rays_size
@@ -157,21 +157,21 @@ class TransientNeuSSystem(BaseSystem):
             
         elif stage in ["test"]:
             #NOTE: self.train_rep=1 during testing
-            x, y = torch.meshgrid(
+            train_x, train_y = torch.meshgrid(
                 torch.arange(self.dataset.w, device=self.dataset.all_c2w.device),
                 torch.arange(self.dataset.h, device=self.dataset.all_c2w.device),
                 indexing="xy",
             ) #(self.dataset.w, self.dataset.h)
-            x = x.flatten()
-            y = y.flatten()
-            rgb = self.dataset.all_images[index, y, x]
+            train_x = train_x.flatten()
+            train_y = train_y.flatten()
+            rgb = self.dataset.all_images[index, train_y, train_x]
             
             self.train_rep = torch.tensor(1, dtype=torch.long)
-            x = x.to(self.rank)
-            y = y.to(self.rank)
-            s_x, s_y, weights = spatial_filter(x, y, sigma=self.dataset.rfilter_sigma, rep = self.train_rep, prob_dithering=self.dataset.sample_as_per_distribution, normalize=False)
-            s_x = (torch.clip(x + torch.from_numpy(s_x).to(self.rank), 0, self.dataset.w).to(torch.float32))
-            s_y = (torch.clip(y + torch.from_numpy(s_y).to(self.rank), 0, self.dataset.h).to(torch.float32))
+            train_x = train_x.to(self.rank)
+            train_y = train_y.to(self.rank)
+            s_x, s_y, weights = spatial_filter(train_x, train_x, sigma=self.dataset.rfilter_sigma, rep = self.train_rep, prob_dithering=self.dataset.sample_as_per_distribution, normalize=False)
+            s_x = (torch.clip(train_x + torch.from_numpy(s_x).to(self.rank), 0, self.dataset.w).to(torch.float32))
+            s_y = (torch.clip(train_y + torch.from_numpy(s_y).to(self.rank), 0, self.dataset.h).to(torch.float32))
             weights = torch.Tensor(weights).to(self.rank)
             
         c2w = self.dataset.all_c2w[index]
@@ -192,25 +192,12 @@ class TransientNeuSSystem(BaseSystem):
         )
         
         
-        if stage in ["train"]:  
+        if stage in ["train", "validation"]:  
             
-            rays_d = (camera_dirs[:self.train_num_rays*self.train_rep, None, :] * c2w[:, :3, :3].to(self.rank)).sum(dim=-1) #upper left corner of the c2w
-            if self.config.model.use_patch_training:
-                #NOTE: The patch rays sampled during training used to perform warping
-                random_number = torch.randint(0, len(self.dataset.all_images), size=(1,), device=self.dataset.all_images.device)
-                random_camera_index = index[random_number]
-                sampled_c2w = self.dataset.all_c2w[random_camera_index]
-                patch_rays_d = (camera_dirs[self.train_num_rays*self.train_rep:self.train_num_rays*self.train_rep+self.config.model.train_patch_size**2, None, :] * sampled_c2w[:,:3, :3].to(self.rank)).sum(dim=-1) #upper left corner of the c2w
-                patch_rays_o = torch.broadcast_to(sampled_c2w[:,:3, -1], patch_rays_d.shape).to(self.rank) #Camera origins from the same view are the same
-                #NOTE: Need to resample a c2w matrix for the new patch trainig rays 
-                training_patch_rays = torch.cat([patch_rays_o, F.normalize(patch_rays_d, p=2, dim=-1)], dim=-1).float() #(self.patch_size**2, 6)
-                rays_dict.update({"training_patch_rays": {"rays": training_patch_rays, 'rotation_matrix': sampled_c2w[:, :3, :3], 'index': index}}) 
-                if self.trainer.global_step == 1:
-                    self.print("Training patch rays has been added!")
-                    
             if self.config.model.use_reg_nerf:
                 #NOTE: the regnerf patch rays are always concatenated at the end, used for rawnerf
-                regnerf_rays_d = (camera_dirs[-self.config.model.train_patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1) #upper left corner of the c2w
+                patch_size = self.config.model.train_patch_size if stage == "train" else 512
+                regnerf_rays_d = (camera_dirs[-patch_size**2:, None, :] * unseen_rotation_matrix.to(self.rank)).sum(dim=-1) #upper left corner of the c2w
                 unseen_rays_o = torch.broadcast_to(unseen_translation_vector, regnerf_rays_d.shape).to(self.rank).float()
                 unseen_rays = torch.cat([unseen_rays_o, F.normalize(regnerf_rays_d, p=2, dim=-1)], dim=-1).float() #(self.patch_size**2 + sparse_rays, 6)
                 rays_dict.update({"regnerf_patch": {'rays': unseen_rays, 'rotation_matrix': unseen_rotation_matrix}})
@@ -219,15 +206,14 @@ class TransientNeuSSystem(BaseSystem):
             
             #Add more rays if needed
             
-            
-        if stage in ["validation", "test"]:
-            rays_d = (camera_dirs[:self.dataset.w*self.dataset.h, None, :] * c2w[:, :3, :3].to(self.rank)).sum(dim=-1) 
-            
+        rays_d = (camera_dirs[:train_x.shape[0], None, :] * c2w[:, :3, :3].to(self.rank)).sum(dim=-1) #upper left corner of the c2w
         rays_o = torch.broadcast_to(c2w[:,:3, -1], rays_d.shape).to(self.rank) #Camera origins from the same view are the same 
         rays = torch.cat([rays_o, F.normalize(rays_d, p=2, dim=-1)], dim=-1).float() #Contains all the rays
         rays_dict.update({"training_rays": {"rays": rays, 'rotation_matrix': c2w[:, :3, :3], 'index': index}})
         if self.trainer.global_step == 1:
             self.print("Training rays has been added!")
+        
+        rays_dict.update({"stage": stage})
         
         if self.config.model.background_color == 'white':
             self.model.background_color = torch.ones((3,), dtype=torch.float32, device=self.rank)
