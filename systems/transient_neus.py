@@ -383,14 +383,14 @@ class TransientNeuSSystem(BaseSystem):
         
         
         #Plot the predicted and gt images on top of each other
-        if not self.global_step % 1000:
-            self.save_plot(f"it{self.global_step}-transient_plot", torch.mean(predicted_rgb[alive_ray_mask], dim=(0,2)), torch.mean((gt_pixs[alive_ray_mask]), dim=(0,2)))
-            self.save_depth_plot(f"it{self.global_step}-transient_depth_plot", predicted_rgb[alive_ray_mask], gt_pixs[alive_ray_mask], out["depth"][:out["depth"].shape[0]//self.train_rep][alive_ray_mask], self.model.exposure_time)
-            #only take the ray indices of the first samples
-            self.save_sdf_plot(f"it{self.global_step}-sdf_depth_plot", out["sdf_samples"], self.model.exposure_time, out["distances_from_origin"],out["depth"][:out["depth"].shape[0]//self.train_rep][alive_ray_mask], out["ray_indices"], alive_ray_mask)
-            self.save_weight_plot(f"it{self.global_step}-weight_plot", out["weights"], self.model.exposure_time, out["distances_from_origin"],out["depth"][:out["depth"].shape[0]//self.train_rep], out["ray_indices"], alive_ray_mask)
-            self.save_transient_figures(f"it{self.global_step}-transient_figures", predicted_rgb, gt_pixs)
-            self.save_color_figures(f"it{self.global_step}-color_figures", gt_pixs.cpu().detach(),predicted_rgb.cpu().detach())
+        # if not self.global_step % 1000:
+        #     self.save_plot(f"it{self.global_step}-transient_plot", torch.mean(predicted_rgb[alive_ray_mask], dim=(0,2)), torch.mean((gt_pixs[alive_ray_mask]), dim=(0,2)))
+        #     self.save_depth_plot(f"it{self.global_step}-transient_depth_plot", predicted_rgb[alive_ray_mask], gt_pixs[alive_ray_mask], out["depth"][:out["depth"].shape[0]//self.train_rep][alive_ray_mask], self.model.exposure_time)
+        #     #only take the ray indices of the first samples
+        #     self.save_sdf_plot(f"it{self.global_step}-sdf_depth_plot", out["sdf_samples"], self.model.exposure_time, out["distances_from_origin"],out["depth"][:out["depth"].shape[0]//self.train_rep][alive_ray_mask], out["ray_indices"], alive_ray_mask)
+        #     self.save_weight_plot(f"it{self.global_step}-weight_plot", out["weights"], self.model.exposure_time, out["distances_from_origin"],out["depth"][:out["depth"].shape[0]//self.train_rep], out["ray_indices"], alive_ray_mask)
+        #     self.save_transient_figures(f"it{self.global_step}-transient_figures", predicted_rgb, gt_pixs)
+        #     self.save_color_figures(f"it{self.global_step}-color_figures", gt_pixs.cpu().detach(),predicted_rgb.cpu().detach())
             
         # update train_num_rays
         if self.config.model.dynamic_ray_sampling:
@@ -648,7 +648,6 @@ class TransientNeuSSystem(BaseSystem):
         
         # self.save_sdf_plots(f"it{self.global_step}-sdf_samples", top_3_indices, out["distances_from_origin"], out["ray_indices"], exposure_time, out["depth"], out["sdf_samples"])
         
-        #TODO: Plot the Distance Transform of the integrated transient or some sort of contour plot
         
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': integrated_transient.view(H, W, 3), 'kwargs': {'data_format': 'HWC'}},

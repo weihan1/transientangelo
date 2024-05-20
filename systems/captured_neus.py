@@ -407,7 +407,7 @@ class CapturedNeuSSystem(BaseSystem):
         weights_sum = 0
         
         rep_number=30
-        for j in range(1):
+        for j in range(rep_number):
             self.print(f"At rep {j}")
             gt_pixs = batch["rgb"].view(H, W, self.dataset.n_bins,3).detach().cpu().numpy()
             sample_weights = batch["weights"]
