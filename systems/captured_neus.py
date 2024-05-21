@@ -89,10 +89,8 @@ class CapturedNeuSSystem(BaseSystem):
                 regnerf_x, regnerf_y = regnerf_x.to(self.rank), regnerf_y.to(self.rank)
                 unseen_rotation_matrix = torch.from_numpy(unseen_rotation_matrix).to(self.rank)
                 #Calculate the rays for the unseen patch using the new rotation matrix and translation vector
-                regnerf_sx, regnerf_sy, _ = spatial_filter(regnerf_x, regnerf_y, sigma=self.dataset.rfilter_sigma , rep = 1, prob_dithering=self.dataset.sample_as_per_distribution)
-                regnerf_sx = torch.clip(regnerf_x + torch.from_numpy(regnerf_sx).to(self.rank), 0, self.dataset.w) #Small perturbations to the random pixel locations
-                regnerf_sy = torch.clip(regnerf_y + torch.from_numpy(regnerf_sy).to(self.rank), 0, self.dataset.h)
-                s_x, s_y = torch.cat([s_x, regnerf_sx], dim=0), torch.cat([s_y, regnerf_sy], dim=0)
+                s_x, s_y = torch.cat([s_x, regnerf_x], dim=0), torch.cat([s_y, regnerf_y], dim=0)
+            
             
         elif stage in ["validation"]:
             #Selecting all tuples (x,y) of the image
@@ -119,10 +117,7 @@ class CapturedNeuSSystem(BaseSystem):
                 regnerf_x, regnerf_y = regnerf_x.to(self.rank), regnerf_y.to(self.rank)
                 unseen_rotation_matrix = torch.from_numpy(unseen_rotation_matrix).to(self.rank)
                 #Calculate the rays for the unseen patch using the new rotation matrix and translation vector
-                regnerf_sx, regnerf_sy, _ = spatial_filter(regnerf_x, regnerf_y, sigma=self.dataset.rfilter_sigma , rep = 1, prob_dithering=self.dataset.sample_as_per_distribution)
-                regnerf_sx = torch.clip(regnerf_x + torch.from_numpy(regnerf_sx).to(self.rank), 0, self.dataset.w) #Small perturbations to the random pixel locations
-                regnerf_sy = torch.clip(regnerf_y + torch.from_numpy(regnerf_sy).to(self.rank), 0, self.dataset.h)
-                s_x, s_y = torch.cat([s_x, regnerf_sx], dim=0), torch.cat([s_y, regnerf_sy], dim=0)
+                s_x, s_y = torch.cat([s_x, regnerf_x], dim=0), torch.cat([s_y, regnerf_y], dim=0)
             
             
         elif stage in ["test"]:

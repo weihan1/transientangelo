@@ -350,6 +350,8 @@ class BaselineNeusCapturedSystem(BaseSystem):
     def validation_step(self, batch, batch_idx):
         out = self(batch)
         W, H = self.dataset.img_wh
+        np.save(self.get_save_path(f"it{self.global_step}-{batch['index'][0].item()}_normal"), out['comp_normal'].view(H, W,3).cpu().numpy())
+        
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': out['comp_rgb_full'].view(H, W, 3), 'kwargs': {'data_format': 'HWC'}}
         ] + ([

@@ -374,6 +374,7 @@ class TransientNeuSModel(BaseModel):
             alpha = self.get_alpha(sdf, normal, t_dirs, t_ends - t_starts)
             return alpha[...,None]
         #TODO: implement the sampling trick proposed in https://proceedings.neurips.cc/paper_files/paper/2023/file/b29ab822442a1616f9bd390fddf6e425-Supplemental-Conference.pdf
+        
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(
                 rays_o, rays_d,
@@ -556,7 +557,8 @@ class TransientNeuSModel(BaseModel):
             if self.config.use_reg_nerf:
                 regnerf_rays = rays_dict["regnerf_patch"]["rays"]
                 out = chunk_batch(self.forward_, self.config.ray_chunk, True, regnerf_rays)
-            out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays)
+            else:
+                out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays)
         elif stage == "test":
             out = chunk_batch(self.forward_, self.config.ray_chunk, True, training_rays)
         return {

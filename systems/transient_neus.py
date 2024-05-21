@@ -117,13 +117,7 @@ class TransientNeuSSystem(BaseSystem):
                                                                                                 sample_boundary = self.config.model.sample_boundary, write_poses = self.config.model.write_poses)
                 regnerf_x, regnerf_y = regnerf_x.to(self.rank), regnerf_y.to(self.rank)
                 unseen_rotation_matrix = torch.from_numpy(unseen_rotation_matrix).to(self.rank)
-                #Calculate the rays for the unseen patch using the new rotation matrix and translation vector
-                regnerf_sx, regnerf_sy, _ = spatial_filter(regnerf_x, regnerf_y, sigma=self.dataset.rfilter_sigma , rep = 1, prob_dithering=self.dataset.sample_as_per_distribution)
-                regnerf_sx = torch.clip(regnerf_x + torch.from_numpy(regnerf_sx).to(self.rank), 0, self.dataset.w) #Small perturbations to the random pixel locations
-                regnerf_sy = torch.clip(regnerf_y + torch.from_numpy(regnerf_sy).to(self.rank), 0, self.dataset.h)
-                s_x, s_y = torch.cat([s_x, regnerf_sx], dim=0), torch.cat([s_y, regnerf_sy], dim=0)
-            
-            
+                s_x, s_y = torch.cat([s_x, regnerf_x], dim=0), torch.cat([s_y, regnerf_y], dim=0)
             
         elif stage in ["validation"]:
             #Selecting all tuples (x,y) of the image
@@ -269,18 +263,8 @@ class TransientNeuSSystem(BaseSystem):
             if out["num_samples_regnerf"] > 0:
                 if self.config.model.train_patch_size>0:
                     #NOTE: the following tensors are always used if patch regnerf is used 
-                    color_patch = out["color_patch"]
                     depth_patch = out["depth_patch"].reshape(self.config.model.train_patch_size, self.config.model.train_patch_size)
-                    transient_patch = out["transient_patch"]
                     depth_variance_patch = out["depth_variance_patch"]
-                    sdf_grad_samples = out["sdf_grad_samples"]
-                    
-                    
-                    # #NOTE: Assumption that we only use 8x8 patch
-                    # assert (color_patch == out["color_patch"][:64]).all()
-                    # assert (depth_patch == out["depth_patch"][:64]).all()
-                    # assert (transient_patch == out["transient_patch"][:64]).all()
-                    # assert (depth_variance_patch == out["depth_variance_patch"][:64]).all()
                     
                     ##NOTE: Depth smoothness regularizer
                     v00 = depth_patch[:-1, :-1]
@@ -289,43 +273,7 @@ class TransientNeuSSystem(BaseSystem):
                     smoothness_loss = (torch.sum(((v00 - v01) ** 2) + ((v00 - v10) ** 2))).item()
                     loss += smoothness_loss * self.C(self.config.system.loss.lambda_depth_smoothness)
                     
-                    
-                    #NOTE: Transient noise regularizer
-                    transient_noise_loss = transient_patch[transient_patch<1e-7].sum()
-                    loss += transient_noise_loss * self.C(self.config.system.loss.lambda_transient_noise) 
-                    
-                    #NOTE: Argmax consistency regularizer
-                    peaks = torch.argmax(transient_patch, dim=1) #(patch_size**2 , 3) 
-                    peaks_size = int(math.sqrt(peaks.shape[0]))
-                    averaged_peaks = torch.mean(peaks.float(), dim=-1).view(peaks_size, peaks_size) #averaged across the channel dimension
-                    peak_differences_row = averaged_peaks[:, 1:] - averaged_peaks[:, :-1] #(patch_size, patch_size-1)
-                    peak_differences_col = averaged_peaks[1:, :] - averaged_peaks[:-1, :]
-                    peak_smoothness_loss_row = torch.sum((peak_differences_row)**2)
-                    peak_smoothness_loss_col = torch.sum((peak_differences_col)**2)
-                    peak_smoothness_loss = peak_smoothness_loss_row + peak_smoothness_loss_col
-                    loss += peak_smoothness_loss * self.C(self.config.system.loss.lambda_argmax_consistency)
-                
-                    #NOTE: Color regularization loss
-                    integrated_transient = color_patch.sum(-2)
-                    integrated_transient = (integrated_transient / integrated_transient.max()) ** (1 / 2.2)
-                    #TODO: Add the pretrained normalizing flow model here:
-                    #loss += NLL(Flow(color_patch)) * self.C(self.config...)
-                    
-                    
-                    #NOTE: Depth variance regularizer
-                    # if self.global_step % 5000 == 0 and self.global_step and self.config.model.use_depth_variance_weight:
-                    #     self.regnerf_patch_depth_variance_weight =  min(1, self.regnerf_patch_depth_variance_weight+0.1)
-                    #     self.print(f"regnerf patch depth variance weight has been updated to {self.regnerf_patch_depth_variance_weight}")
                     loss += depth_variance_patch.mean() * self.C(self.config.system.loss.lambda_regnerf_depth_variance)
-                    
-                    #NOTE: Eikonal loss for regnerf
-                    eikonal_loss_patch = ((torch.linalg.norm(sdf_grad_samples, ord=2, dim=-1) - 1.)**2).mean()
-                    loss += eikonal_loss_patch * self.C(self.config.system.loss.lambda_eikonal_patch)
-                    
-                    #NOTE: Distortion Loss
-                    if self.C(self.config.system.loss.lambda_distortion_patch) > 0:
-                        loss_distortion = flatten_eff_distloss(out['weights_patch'], out['points_patch'], out['intervals_patch'], out['ray_indices_patch'])
-                        loss += loss_distortion * self.C(self.config.system.loss.lambda_distortion_patch)
                     
                 if self.config.model.sparse_rays_size > 0:
                     depth_variance_sparse = out["depth_variance_patch"][-self.config.model.sparse_rays_size:] #always select bottom 64 elements
