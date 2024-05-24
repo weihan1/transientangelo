@@ -76,7 +76,7 @@ def spatial_filter(x, y, sigma, rep, prob_dithering=False, normalize=True):
     
     else: 
         s_x = np.random.uniform(low=-4*sigma, high=4*sigma, size=(rep, x.shape[0]//rep)) #(self.rep, num_rays)
-        s_y = np.random.uniform(low=-4*sigma, high=4*sigma, size=(rep, x.shape[0]//rep))#(self.rep, num_rays)
+        s_y = np.random.uniform(low=-4*sigma, high=4*sigma, size=(rep, x.shape[0]//rep)) #(self.rep, num_rays)
         dists = (s_x**2 + s_y**2) #Look at how far they are from the origin
         weights = pdf_fn(dists)
         if normalize:
