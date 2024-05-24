@@ -242,17 +242,7 @@ class TransientNeuSSystem(BaseSystem):
         
         if self.config.model.multi_ray_shooting:
             self.log('train/rep', self.train_rep)
-            
         self.log('train/number_of_samples', out["num_samples"].float())
-        
-        if self.config.model.use_patch_training: #assumes regnerf rays exist
-            #1. get the pixel locations from the regnerf rays and denote them as p_j = batch["rays_dict"]["regnerf_patch"]["rays"]
-            #2. multiply it by K^-1 (which maps pixel space to camera space of unseen viewpoints)
-            #3. multiply the result by either 1) out["depth"] 
-            #4. multiply it by the rotation matrix of the unseen viewpoint (it's now in world space)
-            #5. multiply it by the inverse of the rotation matrix of the seen viewpoint
-            #6. multiply it by K (which maps camera space to pixel space of seen viewpoint)
-            regnerf_rays = batch["rays_dict"]["regnerf_patch"]["rays"]
                     
         if self.config.model.use_reg_nerf:     
             if out["num_samples_regnerf"] > 0:
@@ -335,48 +325,6 @@ class TransientNeuSSystem(BaseSystem):
         loss_eikonal = ((torch.linalg.norm(out['sdf_grad_samples'], ord=2, dim=-1) - 1.)**2).mean()
         self.log('loss_eikonal', loss_eikonal, prog_bar=True)
         loss += loss_eikonal * self.C(self.config.system.loss.lambda_eikonal)
-        
-        #normal loss proposed in https://nv-tlabs.github.io/adaptive-shells-website/assets/adaptiveShells_paper.pdf
-        #NOTE: only use this when the network is predicting the normals, otherwise loss is 0
-        loss_normal = torch.linalg.norm(out["normal"] - F.normalize(out["sdf_grad_samples"], p=2, dim=-1), ord=2, dim=-1).mean()
-        self.log('loss_normal', loss_normal, prog_bar=False)
-        loss += loss_normal * self.C(self.config.system.loss.lambda_normal)
-        
-        opacity = torch.clamp(out['opacity'].squeeze(-1), 1.e-3, 1.-1.e-3)
-        
-        if "fg_mask" in batch:
-            loss_mask = binary_cross_entropy(opacity, batch['fg_mask'].float())
-            self.log('train/loss_mask', loss_mask)
-            loss += loss_mask * self.C(self.config.system.loss.lambda_mask)
-
-            
-        loss_opaque = binary_cross_entropy(opacity, opacity)
-        self.log('train/loss_opaque', loss_opaque)
-        loss += loss_opaque * self.C(self.config.system.loss.lambda_opaque)
-
-
-        loss_sparsity = torch.exp(-self.config.system.loss.sparsity_scale * out['sdf_samples'].abs()).mean()
-        self.log('train/loss_sparsity', loss_sparsity)
-        loss += loss_sparsity * self.C(self.config.system.loss.lambda_sparsity)
-
-        
-        loss_variance = out["depth_variance"].mean()
-        loss += loss_variance * self.C(self.config.system.loss.lambda_depth_variance)
-        
-        loss_total_variation = torch.sum(torch.norm(out["sdf_grad_samples"], dim=-1, p=2))
-        
-        if self.C(self.config.system.loss.lambda_curvature) > 0:
-            assert 'sdf_laplace_samples' in out, "Need geometry.grad_type='finite_difference' to get SDF Laplace samples"
-            loss_curvature = out['sdf_laplace_samples'].abs().mean()
-            self.log('train/loss_curvature', loss_curvature)
-            loss += loss_curvature * self.C(self.config.system.loss.lambda_curvature)
-
-        # distortion loss proposed in MipNeRF360
-        # an efficient implementation from https://github.com/sunset1995/torch_efficient_distloss
-        if self.C(self.config.system.loss.lambda_distortion) > 0:
-            loss_distortion = flatten_eff_distloss(out['weights'], out['points'], out['intervals'], out['ray_indices'])
-            self.log('train/loss_distortion', loss_distortion)
-            loss += loss_distortion * self.C(self.config.system.loss.lambda_distortion)    
 
         #NOTE: inv_s should be steadily increasing to > 100
         self.log('train/inv_s', out['inv_s'], prog_bar=True) 
