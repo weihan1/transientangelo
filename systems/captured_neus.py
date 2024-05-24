@@ -278,17 +278,7 @@ class CapturedNeuSSystem(BaseSystem):
         self.log('train/loss_eikonal', loss_eikonal, prog_bar=True)
         loss += loss_eikonal * self.C(self.config.system.loss.lambda_eikonal)
         
-        losses_model_reg = self.model.regularizations(out)
-        for name, value in losses_model_reg.items():
-            self.log(f'train/loss_{name}', value)
-            loss_ = value * self.C(self.config.system.loss[f"lambda_{name}"])
-            loss += loss_
-
         self.log('train/inv_s', out['inv_s'], prog_bar=True) 
-        
-        for name, value in self.config.system.loss.items():
-            if name.startswith('lambda'):
-                self.log(f'train_params/{name}', self.C(value))
         
         self.log('train/num_rays', float(self.train_num_rays), prog_bar=True)
 
