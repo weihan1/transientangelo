@@ -541,4 +541,4 @@ def compute_normals_from_transient_captured(depth_map, K, c2w):
     N_norm = torch.linalg.norm(N, dim=-1, keepdim=True)
     N_normalized = N / torch.where(N_norm == 0, torch.ones_like(N_norm), N_norm)
     
-    return N_normalized
+    return -N_normalized #in captured dataset, the normals are inverted

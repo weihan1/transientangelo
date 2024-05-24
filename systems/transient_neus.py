@@ -142,11 +142,7 @@ class TransientNeuSSystem(BaseSystem):
                                                                                                 sample_boundary = self.config.model.sample_boundary)
                 regnerf_x, regnerf_y = regnerf_x.to(self.rank), regnerf_y.to(self.rank)
                 unseen_rotation_matrix = torch.from_numpy(unseen_rotation_matrix).to(self.rank)
-                #Calculate the rays for the unseen patch using the new rotation matrix and translation vector
-                regnerf_sx, regnerf_sy, _ = spatial_filter(regnerf_x, regnerf_y, sigma=self.dataset.rfilter_sigma , rep = 1, prob_dithering=self.dataset.sample_as_per_distribution)
-                regnerf_sx = torch.clip(regnerf_x + torch.from_numpy(regnerf_sx).to(self.rank), 0, self.dataset.w) #Small perturbations to the random pixel locations
-                regnerf_sy = torch.clip(regnerf_y + torch.from_numpy(regnerf_sy).to(self.rank), 0, self.dataset.h)
-                s_x, s_y = torch.cat([s_x, regnerf_sx], dim=0), torch.cat([s_y, regnerf_sy], dim=0)
+                s_x, s_y = torch.cat([s_x, regnerf_x], dim=0), torch.cat([s_y, regnerf_y], dim=0)
             
             
         elif stage in ["test"]:
@@ -249,7 +245,6 @@ class TransientNeuSSystem(BaseSystem):
             
         self.log('train/number_of_samples', out["num_samples"].float())
         
-        #TODO: Do a quick visualization of the warping here
         if self.config.model.use_patch_training: #assumes regnerf rays exist
             #1. get the pixel locations from the regnerf rays and denote them as p_j = batch["rays_dict"]["regnerf_patch"]["rays"]
             #2. multiply it by K^-1 (which maps pixel space to camera space of unseen viewpoints)
@@ -279,15 +274,15 @@ class TransientNeuSSystem(BaseSystem):
                     depth_variance_sparse = out["depth_variance_patch"][-self.config.model.sparse_rays_size:] #always select bottom 64 elements
                     loss += depth_variance_sparse.mean() * self.C(self.config.system.loss.lambda_regnerf_sparse_depth_variance)       
         
-        gt_pixs = torch.reshape(batch["rgb"][:int(batch["rgb"].shape[0]/self.train_rep)], (-1, self.dataset.n_bins, 3)) #Shape (n_rays,1200, 3)
+        gt_pixs = torch.reshape(batch["rgb"][:int(batch["rgb"].shape[0]/self.train_rep)], (-1, self.dataset.n_bins, 3)) #Shape (n_rays,1200, 3), basically just taking the first 512 rays
     
         #Sums across the train_rep dimension 
-        alive_ray_mask = out["rays_valid"].squeeze(-1) #(n_rays, 1)
+        alive_ray_mask = out["rays_valid"].squeeze(-1) 
         alive_ray_mask = alive_ray_mask.reshape(self.train_rep, -1)
-        alive_ray_mask = alive_ray_mask.sum(0).bool() #shape of (num_rays,), #binary mask
+        alive_ray_mask = alive_ray_mask.sum(0).bool() #sums across the train_rep dimension
         self.log('train/alive_ray_mask', float(alive_ray_mask.sum().item()))
         
-        
+        #basically for each pixel you weight the intensity by the weights and sum all
         predicted_rgb = torch.reshape(out["rgb"], (-1, self.dataset.n_bins, 3))*batch["weights"][:, None, None] #(512, 1200, 3)
         
         #Basically penalizes the location in comp_weights where the corresponding locations in gt_pixs have lower than background intensity
@@ -299,49 +294,25 @@ class TransientNeuSSystem(BaseSystem):
         index = torch.arange(int(predicted_rgb.shape[0]/self.train_rep)).repeat(self.train_rep)[:, None, None].expand(-1, self.dataset.n_bins, 3).to(self.rank) #(512,1200,3)
         rgb.scatter_add_(0, index.type(torch.int64), predicted_rgb)
         
-        #NOTE: This is a sanity check when self.train_rep = 1
-        # if (rgb != predicted_rgb).any() and self.train_rep==1:
-        #     self.print("gt and predicted_rgb are not the same")
-        #     self.print(f"gt is {rgb}")
-        #     self.print(f"predicted is {predicted_rgb}")
-        #     exit(1)
-        
-        if self.config.model.learned_background:
-            # https://arxiv.org/pdf/2303.12280.pdf
-            scaling_factor = (torch.mean(gt_pixs.sum(-2), dim = (0,-1)) - torch.mean(rgb.sum(-2), dim= (0,-1)))/torch.mean(out["rgb_bg"].sum(-2), dim= (0,-1))
-            scaling_factor = 0.1
-            rgb = rgb + scaling_factor * out["rgb_bg"]
             
-        gt_pixs = torch.log(gt_pixs + 1) #(num_ray,n_bins,RGB)
-        predicted_rgb = torch.log(rgb + 1) # (num_rays, n_bins, RGB)
-        
+        # gt_pixs = torch.log(gt_pixs + 1) #(num_ray,n_bins,RGB)
+        # predicted_rgb = torch.log(rgb + 1) # (num_rays, n_bins, RGB)
+        gt_pixs = gt_pixs
+        predicted_rgb = rgb
         
         #Plot the predicted and gt images on top of each other
-        # if not self.global_step % 1000:
-        #     self.save_plot(f"it{self.global_step}-transient_plot", torch.mean(predicted_rgb[alive_ray_mask], dim=(0,2)), torch.mean((gt_pixs[alive_ray_mask]), dim=(0,2)))
-        #     self.save_depth_plot(f"it{self.global_step}-transient_depth_plot", predicted_rgb[alive_ray_mask], gt_pixs[alive_ray_mask], out["depth"][:out["depth"].shape[0]//self.train_rep][alive_ray_mask], self.model.exposure_time)
-        #     #only take the ray indices of the first samples
-        #     self.save_sdf_plot(f"it{self.global_step}-sdf_depth_plot", out["sdf_samples"], self.model.exposure_time, out["distances_from_origin"],out["depth"][:out["depth"].shape[0]//self.train_rep][alive_ray_mask], out["ray_indices"], alive_ray_mask)
-        #     self.save_weight_plot(f"it{self.global_step}-weight_plot", out["weights"], self.model.exposure_time, out["distances_from_origin"],out["depth"][:out["depth"].shape[0]//self.train_rep], out["ray_indices"], alive_ray_mask)
-        #     self.save_transient_figures(f"it{self.global_step}-transient_figures", predicted_rgb, gt_pixs)
-        #     self.save_color_figures(f"it{self.global_step}-color_figures", gt_pixs.cpu().detach(),predicted_rgb.cpu().detach())
-            
-        # update train_num_rays
-        if self.config.model.dynamic_ray_sampling:
-            train_num_rays = int(self.train_num_rays * (self.train_num_samples / (out['num_samples_full'].sum().item() + 1e-10)))        
-            self.train_num_rays = min(int(self.train_num_rays * 0.9 + train_num_rays * 0.1), self.config.model.max_train_num_rays)
-
-        #Add a loss that penalizes only the intensity of the argmax for each ray and averaged across all rays and color channels
-        max_gt = torch.max(gt_pixs[alive_ray_mask], dim=1)[0]
-        max_predicted = torch.max(predicted_rgb[alive_ray_mask], dim=1)[0]
-        loss_max = F.l1_loss(max_predicted, max_gt, reduction="mean")
-        loss += loss_max * self.C(self.config.system.loss.lambda_max_l1)
-        self.log('train/loss_max', loss_max)
+        if not self.global_step % 1000:
+            self.save_plot(f"it{self.global_step}-transient_plot", torch.mean(predicted_rgb[alive_ray_mask], dim=(0,2)), torch.mean((gt_pixs[alive_ray_mask]), dim=(0,2)))
+            self.save_depth_plot(f"it{self.global_step}-transient_depth_plot", predicted_rgb[alive_ray_mask], gt_pixs[alive_ray_mask], out["depth"][:out["depth"].shape[0]//self.train_rep][alive_ray_mask], self.model.exposure_time)
+            #only take the ray indices of the first samples
+            self.save_sdf_plot(f"it{self.global_step}-sdf_depth_plot", out["sdf_samples"], self.model.exposure_time, out["distances_from_origin"],out["depth"][:out["depth"].shape[0]//self.train_rep][alive_ray_mask], out["ray_indices"], alive_ray_mask)
+            self.save_weight_plot(f"it{self.global_step}-weight_plot", out["weights"], self.model.exposure_time, out["distances_from_origin"],out["depth"][:out["depth"].shape[0]//self.train_rep], out["ray_indices"], alive_ray_mask)
+            self.save_transient_figures(f"it{self.global_step}-transient_figures", predicted_rgb, gt_pixs)
+            self.save_color_figures(f"it{self.global_step}-color_figures", gt_pixs.cpu().detach(),predicted_rgb.cpu().detach())
         
         
-        #integrated transient loss
         #Normalize + Gamma correct
-        integrated_gt = gt_pixs[alive_ray_mask].sum(-2)
+        integrated_gt = gt_pixs[alive_ray_mask].sum(-2) 
         # integrated_gt /= integrated_gt.max()
         # integrated_gt = integrated_gt**(1/2.2)
         
@@ -361,113 +332,15 @@ class TransientNeuSSystem(BaseSystem):
         self.log('train/space_carving_loss', space_carving_loss)
         loss += space_carving_loss * self.C(self.config.system.loss.lambda_space_carving) 
         
-        # background_transient = min(background_level - predicted_rgb.mean(), 0)
-        # average_predicted_rgb = predicted_rgb.mean()
-        # background_level = 1e-6
-        # background_regularization = torch.relu(background_level - average_predicted_rgb)
-        # loss += background_regularization * self.C(self.config.system.loss.lambda_background_regularization)
-        #NOTE: Interesting idea but keep commented for now
-        # if self.global_step % 3000 == 0 and self.global_step:
-        #     self.annealing_factor *= 5
-        #     self.annealing_factor = min(self.annealing_factor, 1e2)
-        #     self.print(f"Annealing factor has been updated to {self.annealing_factor}")
-        #     self.print(f"Eikonal beta has been updated to {self.annealing_factor * self.C(self.config.system.loss.lambda_eikonal)}")
-            
         loss_eikonal = ((torch.linalg.norm(out['sdf_grad_samples'], ord=2, dim=-1) - 1.)**2).mean()
         self.log('loss_eikonal', loss_eikonal, prog_bar=True)
         loss += loss_eikonal * self.C(self.config.system.loss.lambda_eikonal)
-        
-        #InfoNeRF (https://arxiv.org/pdf/2112.15399.pdf)
-        # num_rays = training_rays.shape[0]
-        # alphas = out["alpha_samples"]
-        # sums = torch.zeros(num_rays, dtype=torch.float32, device=alphas.device).scatter_add_(0, out["ray_indices"], alphas.squeeze())
-        # ray_density =  alphas.squeeze() / sums[out["ray_indices"]]
-        # log_ray_density = torch.log(ray_density + 1e-7)
-        # summed_quantity = ray_density * log_ray_density
-        # shannon_entropy = torch.zeros(num_rays, dtype=summed_quantity.dtype, device=summed_quantity.device).scatter_add_(0, out["ray_indices"], -summed_quantity)
-        # # #implement a mask that checks if the cumulative opacities is above a threshold \epsilon
-
-        # loss_ray_entropy = shannon_entropy.mean()
-        # self.log('loss_ray_entropy', loss_ray_entropy)
-        # loss += loss_ray_entropy * self.C(self.config.system.loss.lambda_ray_entropy)
-        
-        
-        #ASDF Loss (https://www.krafton.ai/en/wp-content/uploads/sites/4/2024/03/3DV_2024_S2F2NeRF_camera_ready-1.pdf)
-        
-        # geometric smoothing loss - my own version
-        
-        # a) d(t) = depth - distances from origin
-        # noisy_gt_depth = torch.mean(gt_pixs, dim=-1) #average over color channels
-        # noisy_depth = torch.argmax(noisy_gt_depth, dim=-1)
-        # noisy_depth = noisy_depth*self.model.exposure_time/2 #convert back to spatial domain
-        # dist_to_surf = out["depth"][out["ray_indices"]].squeeze() - out["distances_from_origin"]
-        # # c) b annealing bound
-        # i_opt = 5000
-        # b_max = 0
-        # b_opt = 3
-        # if self.global_step <= i_opt:
-        #     b = ((i_opt - self.global_step)/i_opt)*(b_max-b_opt) + b_opt
-        # else:
-        #     b = b_opt
-        
-        # # b) |sdf - d(t)| for b>d(t)
-        # mask = b > dist_to_surf
-        # loss_geometric_smoothing = (out["sdf_samples"]-dist_to_surf).abs()[mask].mean()
-        # loss += loss_geometric_smoothing * self.C(self.config.system.loss.lambda_geometric_smoothing)
-        
-        
-        #2. 
-        #TODO: Implement MonoSDF loss (https://arxiv.org/pdf/2206.00665.pdf)
-        
-        
-        #NOTE: Incoporate a sdf distance loss, where, along each visible ray, we penalize sdf points whoses distances from the origin are < predicted depth but have negative sdf
-        # and whose distances from the origin are > predicted depth but have positive sdf
-        
-        #1. First the ground truth transients of the alive rays and compute its argmax
-        # noisy_depth = torch.argmax(torch.mean(gt_pixs, dim=-1), dim=-1)
-        
-        # #2. Find indices of the rays that are alive by transforming the alive_ray_mask to a list of indices      
-        # ray_indices = out["ray_indices"]
-        # alive_ray_indices = alive_ray_mask.nonzero().squeeze(-1)
-        # alive_ray_indices = ray_indices[torch.isin(ray_indices, alive_ray_indices)]
-        
-        # #3. Get the corresponding sdf and distances from the origin
-        # sdf_samples = out["sdf_samples"]
-        # distances_from_origin = out["distances_from_origin"]
-        # distances_from_origin = distances_from_origin*2/self.model.exposure_time
-        # #4 For each visible_ray, find the number of samples that violate the sdf rule 
-        
-        # #Map the gt depth to have the same shape as the shape of the samples
-        # noisy_depth = noisy_depth[alive_ray_indices]
-        
-        # #Find all samples whose distances from the origin are less than the predicted depth but have negative sdf
-        # negative_sdf_mask = sdf_samples < 0
-        # closer_than_gt_mask = distances_from_origin < noisy_depth
-        
-        # #Find all samples whose distances from the origin are greater than the predicted depth but have positive sdf
-        # positive_sdf_mask = sdf_samples > 0
-        # further_than_gt_mask = distances_from_origin > noisy_depth
-        
-        # penalty_mask = (negative_sdf_mask & closer_than_gt_mask) | (positive_sdf_mask & further_than_gt_mask)
-                
-        # # sdf_distance_loss: penalize the absolute
-        # sdf_distance_loss = torch.mean(torch.abs(sdf_samples[penalty_mask]))
-        # loss += sdf_distance_loss * self.C(self.config.system.loss.lambda_sdf_loss)
-        
-        # #Penalizing non-zero sdf loss on the surface
-        # non_zero_sdf_mask = sdf_samples.abs() > 1e-7
-        # at_the_surface = torch.abs(distances_from_origin - noisy_depth) < 1e-7
-        # surface_sdf_loss = torch.mean(torch.abs(sdf_samples[non_zero_sdf_mask & at_the_surface]))
-        # loss += surface_sdf_loss * self.C(self.config.system.loss.lambda_surface_sdf_loss)
-
         
         #normal loss proposed in https://nv-tlabs.github.io/adaptive-shells-website/assets/adaptiveShells_paper.pdf
         #NOTE: only use this when the network is predicting the normals, otherwise loss is 0
         loss_normal = torch.linalg.norm(out["normal"] - F.normalize(out["sdf_grad_samples"], p=2, dim=-1), ord=2, dim=-1).mean()
         self.log('loss_normal', loss_normal, prog_bar=False)
         loss += loss_normal * self.C(self.config.system.loss.lambda_normal)
-        
-        
         
         opacity = torch.clamp(out['opacity'].squeeze(-1), 1.e-3, 1.-1.e-3)
         
@@ -504,11 +377,6 @@ class TransientNeuSSystem(BaseSystem):
             loss_distortion = flatten_eff_distloss(out['weights'], out['points'], out['intervals'], out['ray_indices'])
             self.log('train/loss_distortion', loss_distortion)
             loss += loss_distortion * self.C(self.config.system.loss.lambda_distortion)    
-
-        # if self.config.model.learned_background and self.C(self.config.system.loss.lambda_distortion_bg) > 0:
-        #     loss_distortion_bg = flatten_eff_distloss(out['weights_bg'], out['points_bg'], out['intervals_bg'], out['ray_indices_bg'])
-        #     self.log('train/loss_distortion_bg', loss_distortion_bg)
-        #     loss += loss_distortion_bg * self.C(self.config.system.loss.lambda_distortion_bg)        
 
         #NOTE: inv_s should be steadily increasing to > 100
         self.log('train/inv_s', out['inv_s'], prog_bar=True) 
@@ -560,10 +428,10 @@ class TransientNeuSSystem(BaseSystem):
         point_y = np.array([H//4,H//4,H//4,H//2,H//2,H//2,3*H//4,3*H//4,3*H//4])    
         self.save_plot_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_transient.png", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), self.global_step)
 
+
+
         # PLotting 
         # self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_patch_weight", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["ray_indices"], self.global_step)
-
-
         # #1. Choose three points on the image near the center of the image and plot the image with the dots
         # quotient = 2
         # rendering_ind_x = np.array([256]*(W // 2 ))
@@ -619,7 +487,7 @@ class TransientNeuSSystem(BaseSystem):
         W, H = self.dataset.img_wh
         meta_data = self.dataset.meta
         
-
+        
         # #Initialize all gt tensors
         gt_pixs = batch["rgb"].view(H, W, self.dataset.n_bins,3).detach().cpu().numpy()
         

@@ -154,7 +154,7 @@ class BaselineDatasetCapturedBase():
                 self.all_depths = get_depth_from_transient_captured(self.all_images, self.laser.cpu().numpy(), self.all_fg_masks if self.config.use_mask else None)
                 np.save(f"{self.scene}-{self.num_views}-depths.npy", self.all_depths)
             self.all_normals = compute_normals_from_transient_captured(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
-
+            
         
         #NOTE: Finding the mean focus point
         print(f"Finding mean focus point for {self.split} 🤔")

@@ -239,10 +239,10 @@ class CapturedNeuSSystem(BaseSystem):
         index = torch.arange(int(predicted_rgb.shape[0]/self.dataset.rep)).repeat(self.dataset.rep)[:, None, None].expand(-1, self.dataset.n_bins, 3).to(self.rank) #(?,1200,3)
         rgb.scatter_add_(0, index.type(torch.int64), predicted_rgb)
         
-        gt_pixs = torch.log(gt_pixs + 1) #(num_ray,n_bins,RGB)
-        predicted_rgb = torch.log(rgb + 1) # (num_rays, n_bins, RGB)
-        #Plot the predicted and gt images on top of each other
-        
+        # gt_pixs = torch.log(gt_pixs + 1) #(num_ray,n_bins,RGB)
+        # predicted_rgb = torch.log(rgb + 1) # (num_rays, n_bins, RGB)
+        gt_pixs = gt_pixs
+        predicted_rgb = rgb        
         
         if not self.global_step % 1000:
             self.save_plot(f"it{self.global_step}-transient_plot", torch.mean(predicted_rgb[alive_ray_mask], dim=(0,2)), torch.mean(gt_pixs[alive_ray_mask], dim=(0,2)))
@@ -267,10 +267,8 @@ class CapturedNeuSSystem(BaseSystem):
         # integrated_pred /= integrated_pred.max()
         # integrated_pred = integrated_pred**(1/2.2)
         
-        loss_integrated = F.l1_loss(integrated_pred.mean(-1), integrated_gt[...,0], reduction="mean")
+        loss_integrated = F.l1_loss(integrated_pred.mean(-1), integrated_gt[...,0], reduction="mean") #the integrated pred are not monochromatic so we average them 
         loss += loss_integrated * self.C(self.config.system.loss.lambda_integrated_l1)
-        
-        
         
         #photometric loss
         loss_rgb_l1 = F.l1_loss(predicted_rgb.mean(-1)[alive_ray_mask], gt_pixs[...,0][alive_ray_mask])

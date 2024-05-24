@@ -195,7 +195,7 @@ class CapturedNeuSModel(BaseModel):
         normal = F.normalize(sdf_grad, p=2, dim=-1)
         alpha = self.get_alpha(sdf, normal, t_dirs, intervals)[...,None] #NOTE: be careful here, think adjacent sample
         rgb = self.texture(feature, t_dirs, normal)
-        rgb = torch.exp(rgb) - 1 #taking exp again as double exp enforces non-negativity and helps with HDR
+        # rgb = torch.exp(rgb) - 1 #taking exp again as double exp enforces non-negativity and helps with HDR
         weights_non_squared = render_weight_from_alpha(alpha, ray_indices=ray_indices, n_rays=n_rays)
         actual_colors = accumulate_along_rays(weights_non_squared, ray_indices, values=rgb, n_rays=n_rays)
         only_weights = weights_non_squared

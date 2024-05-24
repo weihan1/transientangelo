@@ -452,40 +452,40 @@ class SaverMixin():
         plt.close(fig)
         
         
-    def save_weight_grid(self, filename, point_x, point_y, transient, weights, ray_indices, global_step):
-        '''
-        Plot the weights of the selected points
-        '''
-        height = transient.shape[0]
-        n_points = len(point_x)
-        fig = plt.figure(figsize=(20, 5))
-        gs = GridSpec(1, n_points + 1, width_ratios=[3] + [1]*n_points)  # First subplot 3 times wider
-        integrated_transient = transient.sum(-2)  # sums along the time dimension to get the integrated transient
-        integrated_transient = (integrated_transient / integrated_transient.max()) ** (1 / 2.2)  # gamma correct it
+    # def save_weight_grid(self, filename, transient, weights, ray_indices, global_step):
+    #     '''
+    #     Plot the weights of the selected points
+    #     '''
+    #     height = transient.shape[0]
+    #     n_points = len(point_x)
+    #     fig = plt.figure(figsize=(20, 5))
+    #     gs = GridSpec(1, n_points + 1, width_ratios=[3] + [1]*n_points)  # First subplot 3 times wider
+    #     integrated_transient = transient.sum(-2)  # sums along the time dimension to get the integrated transient
+    #     integrated_transient = (integrated_transient / integrated_transient.max()) ** (1 / 2.2)  # gamma correct it
         
-        # Plot the integrated transient in a larger subplot
-        ax0 = fig.add_subplot(gs[0, 0])
-        ax0.imshow(integrated_transient)
-        for i in range(n_points):
-            ax0.scatter(point_x[i], point_y[i], color="red")
-        ax0.set_title(f'Integrated transient at {global_step} steps')
+    #     # Plot the integrated transient in a larger subplot
+    #     ax0 = fig.add_subplot(gs[0, 0])
+    #     ax0.imshow(integrated_transient)
+    #     for i in range(n_points):
+    #         ax0.scatter(point_x[i], point_y[i], color="red")
+    #     ax0.set_title(f'Integrated transient at {global_step} steps')
         
-        for i in range(n_points):
-            ax = fig.add_subplot(gs[0, i+1])  # Create each subsequent subplot
-            #convert point_y[i], point_x[i] into the specific ray index
+    #     for i in range(n_points):
+    #         ax = fig.add_subplot(gs[0, i+1])  # Create each subsequent subplot
+    #         #convert point_y[i], point_x[i] into the specific ray index
             
-            #Find the ray index for the selected point
-            linear_index=point_y[i]*height+point_x[i]
-            ray_index = ray_indices[ray_indices == linear_index]
-            selected_weight = weights[ray_index]
-            ax.plot(selected_weight)
-            ax.set_title(f'Plot {i+1} - {point_x[i], point_y[i]}')
-            ax.set_xlabel('Time')
-            ax.set_ylabel('Weights')
+    #         #Find the ray index for the selected point
+    #         linear_index=point_y[i]*height+point_x[i]
+    #         ray_index = ray_indices[ray_indices == linear_index]
+    #         selected_weight = weights[ray_index]
+    #         ax.plot(selected_weight)
+    #         ax.set_title(f'Plot {i+1} - {point_x[i], point_y[i]}')
+    #         ax.set_xlabel('Time')
+    #         ax.set_ylabel('Weights')
             
-        plt.tight_layout()
-        plt.savefig(self.get_save_path(filename))
-        plt.close(fig)
+    #     plt.tight_layout()
+    #     plt.savefig(self.get_save_path(filename))
+    #     plt.close(fig)
         
         
     def save_weight_plot(self, filename, weights, exposure_time, distances_from_origin, depth, ray_indices, alive_ray_mask):
