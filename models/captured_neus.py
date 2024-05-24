@@ -291,11 +291,10 @@ class CapturedNeuSModel(BaseModel):
         else:
             sdf, sdf_grad, feature = self.geometry(positions, with_grad=True, with_feature=True)
     
-        #TODO: Possible extension HERE, feed the transients into a ViT to extract features and then feed that as auxiliary input to self.geometry
         normal = F.normalize(sdf_grad, p=2, dim=-1)
         alpha = self.get_alpha(sdf, normal, t_dirs, intervals)[...,None] #NOTE: be careful here, think adjacent sample
         rgb = self.texture(feature, t_dirs, normal)
-        rgb = torch.exp(rgb) - 1 #taking exp again as double exp enforces non-negativity and helps with HDR
+        # rgb = torch.exp(rgb) - 1 #taking exp again as double exp enforces non-negativity and helps with HDR
         weights_non_squared = render_weight_from_alpha(alpha, ray_indices=ray_indices, n_rays=n_rays)
         only_weights = weights_non_squared
         

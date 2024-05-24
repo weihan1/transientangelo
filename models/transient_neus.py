@@ -208,7 +208,7 @@ class TransientNeuSModel(BaseModel):
 
         density, feature = self.geometry_bg(positions) 
         rgb = self.texture_bg(feature, t_dirs)
-        rgb = torch.exp(rgb) - 1 
+        # rgb = torch.exp(rgb) - 1 
 
         weights_non_squared = render_weight_from_density(t_starts, t_ends, density[...,None], ray_indices=ray_indices, n_rays=n_rays) #matches
         only_weights = weights_non_squared
