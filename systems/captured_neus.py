@@ -250,14 +250,6 @@ class CapturedNeuSSystem(BaseSystem):
             self.save_depth_plot(f"it{self.global_step}-transient_depth_plot", predicted_rgb[alive_ray_mask], gt_pixs[alive_ray_mask], out["depth"][alive_ray_mask], self.model.exposure_time)
             self.save_sdf_plot(f"it{self.global_step}-sdf_depth_plot", out["sdf_samples"], self.model.exposure_time, out["distances_from_origin"],out["depth"][alive_ray_mask], out["ray_indices"], alive_ray_mask)
 
-            
-            
-        # update train_num_rays
-        if self.config.model.dynamic_ray_sampling:
-            train_num_rays = int(self.train_num_rays * (self.train_num_samples / ((out['num_samples']).sum().item() + 1e-5)))        
-            self.train_num_rays = min(int(self.train_num_rays * 0.9 + train_num_rays * 0.1), self.config.model.max_train_num_rays)
-        
-        
         #integrated transient loss
         #Normalize + Gamma correct
         integrated_gt = gt_pixs[alive_ray_mask].sum(-2)
@@ -285,45 +277,6 @@ class CapturedNeuSSystem(BaseSystem):
         loss_eikonal = ((torch.linalg.norm(out['sdf_grad_samples'], ord=2, dim=-1) - 1.)**2).mean()
         self.log('train/loss_eikonal', loss_eikonal, prog_bar=True)
         loss += loss_eikonal * self.C(self.config.system.loss.lambda_eikonal)
-        
-        
-        opacity = torch.clamp(out['opacity'].squeeze(-1), 1.e-3, 1.-1.e-3)
-        # loss_mask = binary_cross_entropy(opacity, batch['fg_mask'].float())
-        # self.log('train/loss_mask', loss_mask)
-        # loss += loss_mask * (self.C(self.config.system.loss.lambda_mask) if self.dataset.has_mask else 0.0)
-
-        loss_opaque = binary_cross_entropy(opacity, opacity)
-        self.log('train/loss_opaque', loss_opaque)
-        loss += loss_opaque * self.C(self.config.system.loss.lambda_opaque)
-
-        loss_sparsity = torch.exp(-self.config.system.loss.sparsity_scale * out['sdf_samples'].abs()).mean()
-        self.log('train/loss_sparsity', loss_sparsity)
-        loss += loss_sparsity * self.C(self.config.system.loss.lambda_sparsity)
-        
-        
-        loss_variance = out["weight_variance"].mean()
-        loss += loss_variance * self.C(self.config.system.loss.lambda_depth_variance)
-        
-        
-        
-        if self.C(self.config.system.loss.lambda_curvature) > 0:
-            assert 'sdf_laplace_samples' in out, "Need geometry.grad_type='finite_difference' to get SDF Laplace samples"
-            loss_curvature = out['sdf_laplace_samples'].abs().mean()
-            self.log('train/loss_curvature', loss_curvature)
-            loss += loss_curvature * self.C(self.config.system.loss.lambda_curvature)
-
-        
-        # distortion loss proposed in MipNeRF360
-        # an efficient implementation from https://github.com/sunset1995/torch_efficient_distloss, but still slows down training by ~30%
-        if self.C(self.config.system.loss.lambda_distortion) > 0:
-            loss_distortion = flatten_eff_distloss(out['weights'], out['points'], out['intervals'], out['ray_indices'])
-            self.log('train/loss_distortion', loss_distortion)
-            loss += loss_distortion * self.C(self.config.system.loss.lambda_distortion)
-            
-        if self.config.model.learned_background and self.C(self.config.system.loss.lambda_distortion_bg) > 0:
-            loss_distortion_bg = flatten_eff_distloss(out['weights_bg'], out['points_bg'], out['intervals_bg'], out['ray_indices_bg'])
-            self.log('train/loss_distortion_bg', loss_distortion_bg)
-            loss += loss_distortion_bg * self.C(self.config.system.loss.lambda_distortion_bg)      
         
         losses_model_reg = self.model.regularizations(out)
         for name, value in losses_model_reg.items():
