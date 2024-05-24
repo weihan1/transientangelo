@@ -220,6 +220,7 @@ class CapturedNeuSSystem(BaseSystem):
                 v01 = depth_patch[:-1, 1:]
                 v10 = depth_patch[1:, :-1]
                 smoothness_loss = (torch.sum(((v00 - v01) ** 2) + ((v00 - v10) ** 2))).item()
+                loss += depth_variance_patch.mean() * self.C(self.config.system.loss.lambda_regnerf_depth_variance)
                 loss += smoothness_loss * self.C(self.config.system.loss.lambda_depth_smoothness)
 
         
