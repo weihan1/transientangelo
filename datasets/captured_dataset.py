@@ -76,7 +76,6 @@ class CapturedDatasetBase():
         laser = laser / laser.sum()
         laser = laser[::-1]
         self.laser = torch.tensor(laser.copy()).float().to(self.rank)
-        #NOTE: laser is cross-referenced correctly
         self.laser_kernel = torch_laser_kernel(self.laser, device=self.rank)
             
         

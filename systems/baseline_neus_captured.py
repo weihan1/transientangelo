@@ -460,8 +460,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
     def test_epoch_end(self, out):
         out = self.all_gather(out)
         if self.trainer.is_global_zero:
-            rank_zero_info("Exporting Mesh...")
-            mesh_path = self.export()
             out_set = {}
             for step_out in out:
                 # DP
@@ -534,7 +532,8 @@ class BaselineNeusCapturedSystem(BaseSystem):
                 fps=10
             )
             
-            
+            rank_zero_info("Exporting Mesh...")
+            # self.export()
     
     def export(self):
         mesh = self.model.export(self.config.export)

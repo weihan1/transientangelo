@@ -101,7 +101,7 @@ class CapturedNeRFSystem(BaseSystem):
             rgb = self.dataset.all_images[index, y, x]
             x = x.to(self.rank)
             y = y.to(self.rank)
-            s_x, s_y, weights = spatial_filter(x, y, sigma=self.dataset.rfilter_sigma, rep = self.dataset.rep, prob_dithering=self.dataset.sample_as_per_distribution)
+            s_x, s_y, weights = spatial_filter(x, y, sigma=self.dataset.rfilter_sigma, rep = self.dataset.rep, prob_dithering=self.dataset.sample_as_per_distribution, normalize=False)
             s_x = (torch.clip(x + torch.from_numpy(s_x).to(self.rank), 0, self.dataset.w).to(torch.float32))
             s_y = (torch.clip(y + torch.from_numpy(s_y).to(self.rank), 0, self.dataset.h).to(torch.float32))
             weights = torch.Tensor(weights).to(self.rank)
@@ -266,9 +266,8 @@ class CapturedNeRFSystem(BaseSystem):
     def test_step(self, batch, batch_idx):  
         #This computes metrics for each image individually, the next method aggregates all
         W, H = self.dataset.img_wh
-        meta_data = self.dataset.meta
         rank_zero_info("Exporting mesh...")
-        self.export()
+        # self.export()
         rank_zero_info("Mesh finished exporting")
         rgb = np.zeros((H, W, self.dataset.n_bins,3))
         depth = np.zeros((H, W))
@@ -280,7 +279,6 @@ class CapturedNeRFSystem(BaseSystem):
         for j in range(rep_number):
             self.print(f"At rep {j}")
             gt_pixs = batch["rgb"].view(H, W, self.dataset.n_bins,3).detach().cpu().numpy()
-            rays = batch["rays"]
             sample_weights = batch["weights"]
             out = self(batch)
             depth += (torch.squeeze(out["depth"]*sample_weights.detach().cpu()).reshape(W, H)).detach().cpu().numpy()
@@ -339,8 +337,8 @@ class CapturedNeRFSystem(BaseSystem):
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
-        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
-        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (ground_truth_image*255.0).astype(np.uint8))
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image.numpy()*255.0).astype(np.uint8))
+        imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (ground_truth_image.numpy()*255.0).astype(np.uint8))
         self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {'data_format': 'HWC'}},
             {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {'data_format': 'HWC'}},
@@ -415,8 +413,8 @@ class CapturedNeRFSystem(BaseSystem):
             # self.log('test/MSE_depth', MSE_depth, prog_bar=True, rank_zero_only=True,sync_dist=True)        
             # self.log('test/l1_depth_gt_lm_ours', l1_depth_gt_lm_ours, prog_bar=True, rank_zero_only=True,sync_dist=True)        
             # self.log('test/MSE_depth_gt_lm_ours', MSE_depth_gt_lm_ours, prog_bar=True, rank_zero_only=True,sync_dist=True)        
-            self.log('test/psnr', psnr, prog_bar=True, rank_zero_only=True,sync_dist=True)        
             # self.log('test/mse', mse, prog_bar=True, rank_zero_only=True,sync_dist=True) 
+            self.log('test/psnr', psnr, prog_bar=True, rank_zero_only=True,sync_dist=True)        
             self.log('test/ssim', ssim, prog_bar=True, rank_zero_only=True,sync_dist=True)
             self.log('test/lpips', lpips, prog_bar=True, rank_zero_only=True,sync_dist=True)       
             self.log('test/iou', iou, prog_bar=True, rank_zero_only=True, sync_dist=True)     

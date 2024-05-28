@@ -355,15 +355,13 @@ class CapturedNeuSSystem(BaseSystem):
             rgb += (out["rgb"] * sample_weights[:,None][:,None].detach().cpu().numpy()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()        
             opacity += (torch.squeeze(out["opacity"]) *sample_weights.detach().cpu().numpy()).reshape(H,W).detach().cpu().numpy()
             weights_sum += sample_weights.detach().cpu().numpy()
-        
+            del out
         
         rgb = rgb / weights_sum.reshape(H, W, 1,1) #(H,W,1500,3)
         depth = depth / weights_sum.reshape(H, W)
         opacity = opacity/weights_sum.reshape(H,W)
         depth_image = depth * opacity
         gt_pixs = gt_pixs.reshape(H, W, self.dataset.n_bins, 3)
-        
-        
         lm = correlate1d(gt_pixs[..., 0], self.dataset.laser.cpu().numpy(), axis=-1)
         exr_depth = np.argmax(lm, axis=-1)
         exr_depth = (exr_depth*2*299792458*4e-12)/2
@@ -412,12 +410,12 @@ class CapturedNeuSSystem(BaseSystem):
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image.numpy()*255.0).astype(np.uint8))
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image.numpy()*255.0).astype(np.uint8))
         
-        # self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
-        #     {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
-        #     {'type': 'rgb', 'img': data_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
-        #     {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
-        #     {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
-        # ])
+        self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
+            {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
+            {'type': 'rgb', 'img': data_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
+            {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
+            {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},
+        ])
         
         
         W, H = self.dataset.img_wh
