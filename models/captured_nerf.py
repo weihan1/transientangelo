@@ -80,15 +80,6 @@ class CapturedNeRFModel(BaseModel):
             density, _ = self.geometry(positions)
             return density[...,None]
         
-        def rgb_sigma_fn(t_starts, t_ends, ray_indices):
-            ray_indices = ray_indices.long()
-            t_origins = rays_o[ray_indices]
-            t_dirs = rays_d[ray_indices]
-            positions = t_origins + t_dirs * (t_starts + t_ends) / 2.
-            density, feature = self.geometry(positions) 
-            rgb = self.texture(feature, t_dirs)
-            return rgb, density[...,None]
-
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(
                 rays_o, rays_d,
@@ -113,7 +104,6 @@ class CapturedNeRFModel(BaseModel):
         rgb = self.texture(feature, t_dirs)
         rgb = torch.exp(rgb) - 1 #taking exp again as double exp enforces non-negativity
         weights_non_squared = render_weight_from_density(t_starts, t_ends, density[...,None], ray_indices=ray_indices, n_rays=n_rays) 
-        actual_colors = accumulate_along_rays(weights_non_squared, values = rgb, ray_indices=ray_indices, n_rays=n_rays)
         only_weights = weights_non_squared
         alphas = (1 - torch.exp(-2*density[...,None] * (t_ends - t_starts)))/2 # new formula
         
@@ -176,7 +166,6 @@ class CapturedNeRFModel(BaseModel):
         depths_variance = depths_variance/(opacity+1e-10)
 
         out = {
-            "actual_colors": actual_colors,
             'opacity': opacity,
             'depth': torch.squeeze(depths),
             'rays_valid': opacity > 0,
@@ -220,7 +209,6 @@ class CapturedNeRFModel(BaseModel):
         losses.update(self.texture.regularizations(out))
         return losses
 
-    #TODO: viewing direction might be inverted for captured
     @torch.no_grad()
     def export(self, export_config):
         mesh = self.isosurface()

@@ -448,8 +448,9 @@ class TransientNeuSSystem(BaseSystem):
         weights_sum = 0
         rgb = np.zeros((H, W, self.dataset.n_bins, 3))
         depth = np.zeros((H, W))
-        opacity = np.zeros((H, W))
+        depth_viz = np.zeros((H, W))
         
+                
         rep_number=30
         for j in range(rep_number):
             self.print(f"Rep number {j}")
@@ -457,15 +458,14 @@ class TransientNeuSSystem(BaseSystem):
             out = self(batch)
             depth += ((torch.squeeze(out["depth"])*sample_weights.detach().cpu()).reshape(W, H)).detach().cpu().numpy()
             rgb += (out["rgb"] * sample_weights[:, None][:, None].detach().cpu()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()        
-            opacity += (torch.squeeze(out["opacity"]) *sample_weights.detach().cpu().numpy()).reshape(H,W).detach().cpu().numpy()
+            depth_viz += (out["depth"]*sample_weights.detach().cpu()*torch.squeeze((out["opacity"]>0))).reshape(H, W).detach().cpu().numpy()
             weights_sum += sample_weights.detach().cpu().numpy()
             del out
             
         rgb = rgb/weights_sum.reshape(H, W, 1,1)
         depth = depth/weights_sum.reshape(H,W)
         opacity = opacity/weights_sum.reshape(H,W)
-        depth_image = depth*opacity        
-        
+        depth_viz = depth_viz / weights_sum.reshape(H, W)
         
         mask = (gt_pixs.sum((-1, -2)) > 0) # (H,W)
         # #1. Calculate the L1 and MSE error b/w rendered depth vs gt depths (gt depths can be extracted using the get_gt_depth function)
@@ -511,7 +511,7 @@ class TransientNeuSSystem(BaseSystem):
         exr_depth[exr_depth == exr_depth[0][0]] = 0
         
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=2.5, vmax=5.5)
-        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_viz, cmap='inferno', vmin=2.2, vmax=5.5)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image*255.0).astype(np.uint8))
@@ -520,7 +520,7 @@ class TransientNeuSSystem(BaseSystem):
         self.save_image_plot_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
             {'type': 'rgb', 'img': data_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
-            {'type': 'depth', 'img': depth_image, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":2.5, "vmax":5.5},},
+            {'type': 'depth', 'img': depth_viz, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":2.5, "vmax":5.5},},
             {'type': 'depth', 'img': exr_depth, 'kwargs': {"title": "Ground Truth Depth", "cmap": "inferno", "vmin":2.5, "vmax":5.5},},
         ])
         
