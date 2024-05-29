@@ -403,7 +403,7 @@ class CapturedNeRFSystem(BaseSystem):
             )
             
             rank_zero_info("Exporting mesh...")
-            # self.export()
+            self.export()
             rank_zero_info("Mesh finished exporting")
 
     def export(self):
