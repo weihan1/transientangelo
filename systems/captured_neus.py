@@ -10,7 +10,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
 from pytorch_lightning.loggers import TensorBoardLogger
 import imageio
-
+import imgviz
 import models
 from models.ray_utils import get_rays, spatial_filter, generate_unseen_poses
 from models.mesh_utils import calculate_chamfer_distance
@@ -307,9 +307,14 @@ class CapturedNeuSSystem(BaseSystem):
         predicted_image = (predicted_image/predicted_image.max())**(1/2.2) #(512,512,3)
         
         W, H = self.dataset.img_wh
+        
+        depth_image = (out["depth"]*torch.squeeze(out["opacity"])).view(H,W)
+        depth_image = imgviz.depth2rgb(depth_image.numpy(), colormap="inferno")
+        
+        
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': predicted_image.view(H, W, 3), 'kwargs': {'data_format': 'HWC'}},
-            {'type': 'grayscale', 'img': (out['depth']*torch.squeeze(out["opacity"])).view(H, W), 'kwargs': {}}
+            {'type': 'grayscale', 'img': depth_image, 'kwargs': {}}
         ])
         
         # psnr = self.criterions['psnr'](out['comp_rgb'].to(batch['rgb']), batch['rgb'])
@@ -411,7 +416,7 @@ class CapturedNeuSSystem(BaseSystem):
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image.numpy()*255.0).astype(np.uint8))
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image.numpy()*255.0).astype(np.uint8))
         
-        self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
+        self.save_image_plot_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
             {'type': 'rgb', 'img': data_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
             {'type': 'depth', 'img': depth_viz, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},

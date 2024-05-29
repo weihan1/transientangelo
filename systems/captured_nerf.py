@@ -7,6 +7,7 @@ from scipy.ndimage import correlate1d
 import os
 import matplotlib.pyplot as plt
 import imageio
+import imgviz
 
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
@@ -205,11 +206,12 @@ class CapturedNeRFSystem(BaseSystem):
         predicted_image = torch.stack([predicted_image, predicted_image, predicted_image], -1) #(512,512,3)
         predicted_image = (predicted_image/predicted_image.max())**(1/2.2) #(512,512,3)
         W, H = self.dataset.img_wh
-        
+        depth_image = (out["depth"]*torch.squeeze(out["opacity"])).view(H,W)
+        depth_image = imgviz.depth2rgb(depth_image.numpy(), colormap="inferno")
         
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': predicted_image.view(H, W, 3), 'kwargs': {'data_format': 'HWC'}},
-            {'type': 'grayscale', 'img': (out['depth']*torch.squeeze(out["opacity"])).view(H, W), 'kwargs': {}}
+            {'type': 'grayscale', 'img': depth_image, 'kwargs': {}}
         ])
         # psnr = self.criterions['psnr'](out['comp_rgb'].to(batch['rgb']), batch['rgb'])
         return True
@@ -309,7 +311,7 @@ class CapturedNeRFSystem(BaseSystem):
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image.numpy()*255.0).astype(np.uint8))
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (ground_truth_image.numpy()*255.0).astype(np.uint8))
-        self.save_image_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
+        self.save_image_plot_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
             {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},
             {'type': 'depth', 'img': depth_viz, 'kwargs': {"title": "Predicted Depth", "cmap": "inferno", "vmin":0.8, "vmax":1.5},},

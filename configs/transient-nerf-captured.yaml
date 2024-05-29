@@ -34,7 +34,7 @@ model:
   dynamic_ray_sampling: false
   batch_image_sampling: true
   randomized: true
-  ray_chunk: 16384 #Decrease if OOM during validation/testing, powers of 2 e.g. 16384
+  ray_chunk: 4096 #Decrease if OOM during validation/testing, powers of 2 e.g. 16384
   learned_background: false
   background_color: black
   geometry:
@@ -84,7 +84,7 @@ system:
   optimizer:
     name: AdamW
     args:
-      lr: 1.e-4 #NOTE: Do not change this
+      lr: 1.e-3 #NOTE: Do not change this
       betas: [0.9, 0.99]
       eps: 1.e-15
   scheduler:
@@ -92,7 +92,7 @@ system:
     interval: step
     args:
       #NOTE: These milestones should be dynamically modified if trainer.max_steps were to change
-      milestones: [125000, 187500, 225000]
+      milestones: [75000, 112500, 135000]
       gamma: 0.33
 
 checkpoint:
