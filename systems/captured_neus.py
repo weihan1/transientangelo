@@ -357,6 +357,7 @@ class CapturedNeuSSystem(BaseSystem):
             out = self(batch)
             depth += (torch.squeeze(out["depth"]*sample_weights.detach().cpu()).reshape(W, H)).detach().cpu().numpy()
             depth_viz += (out["depth"]*sample_weights.detach().cpu()*torch.squeeze((out["opacity"]>0))).reshape(H, W).detach().cpu().numpy()
+            opacity += (torch.squeeze(out["opacity"]) *sample_weights.detach().cpu().numpy()).reshape(H,W).detach().cpu().numpy()
             rgb += (out["rgb"] * sample_weights[:,None][:,None].detach().cpu().numpy()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()        
             weights_sum += sample_weights.detach().cpu().numpy()
             del out
@@ -365,6 +366,7 @@ class CapturedNeuSSystem(BaseSystem):
         depth = depth / weights_sum.reshape(H, W)
         opacity = opacity/weights_sum.reshape(H,W)
         depth_viz = depth_viz / weights_sum.reshape(H, W)
+        depth_image = depth * opacity
         gt_pixs = gt_pixs.reshape(H, W, self.dataset.n_bins, 3)
         lm = correlate1d(gt_pixs[..., 0], self.dataset.laser.cpu().numpy(), axis=-1)
         exr_depth = np.argmax(lm, axis=-1)
@@ -409,6 +411,7 @@ class CapturedNeuSSystem(BaseSystem):
         
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=0.8, vmax=1.5)
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_viz, cmap='inferno', vmin=0.8, vmax=1.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_image.png"), depth_image, cmap='inferno', vmin=0.8, vmax=1.5)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image.numpy()*255.0).astype(np.uint8))

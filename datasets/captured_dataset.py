@@ -80,7 +80,8 @@ class CapturedDatasetBase():
             
         
         if self.split in ["train", "val"]:
-            with open(os.path.join(self.config.root_dir, "final_cams", self.config.num_views + "_views", f"transforms_{self.split}.json"), 'r') as f:
+            #Rendering the training poses during validation as well
+            with open(os.path.join(self.config.root_dir, "final_cams", self.config.num_views + "_views", f"transforms_train.json"), 'r') as f: 
                 meta = json.load(f)
                 
         else: #NOTE: the captured dataset test poses are in a separate folder 
