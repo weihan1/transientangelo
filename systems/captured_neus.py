@@ -358,11 +358,16 @@ class CapturedNeuSSystem(BaseSystem):
             depth += (torch.squeeze(out["depth"]*sample_weights.detach().cpu()).reshape(W, H)).detach().cpu().numpy()
             depth_viz += (out["depth"]*sample_weights.detach().cpu()*torch.squeeze((out["opacity"]>0))).reshape(H, W).detach().cpu().numpy()
             opacity += (torch.squeeze(out["opacity"]) *sample_weights.detach().cpu().numpy()).reshape(H,W).detach().cpu().numpy()
-            rgb += (out["rgb"] * sample_weights[:,None][:,None].detach().cpu().numpy()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()        
+            rgb += (out["rgb"] * sample_weights[:,None][:,None].detach().cpu().numpy()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()
+            if np.isnan(rgb).any():
+                print("rgb is nan here")   
             weights_sum += sample_weights.detach().cpu().numpy()
             del out
         
         rgb = rgb / weights_sum.reshape(H, W, 1,1) #(H,W,1500,3)
+        if np.isnan(rgb).any():
+            print("rgb is nan here")   
+            
         depth = depth / weights_sum.reshape(H, W)
         opacity = opacity/weights_sum.reshape(H,W)
         depth_viz = depth_viz / weights_sum.reshape(H, W)
@@ -389,7 +394,6 @@ class CapturedNeuSSystem(BaseSystem):
         scaling = self.dataset.focal
         rgb_image = torch.from_numpy(rgb.sum(axis=-2))
         rgb_image = (rgb_image*self.dataset.transient_scale/self.dataset.div_vals[self.config.dataset.scene]) ** (1 / 2.2)
-        
         data_image = torch.from_numpy(gt_pixs.sum(axis=-2))
         data_image = ((scaling * data_image/self.dataset.div_vals[self.config.dataset.scene]) ** (1 / 2.2)).to(torch.float64)
     

@@ -254,13 +254,16 @@ class CapturedNeRFSystem(BaseSystem):
             out = self(batch)
             depth += (torch.squeeze(out["depth"]*sample_weights.detach().cpu()).reshape(H, W)).detach().cpu().numpy()
             depth_viz += (out["depth"]*sample_weights.detach().cpu()*torch.squeeze((out["opacity"]>0))).reshape(H, W).detach().cpu().numpy()
+            opacity += (torch.squeeze(out["opacity"]) *sample_weights.detach().cpu().numpy()).reshape(H,W).detach().cpu().numpy()
             rgb += (out["rgb"] * sample_weights[:,None][:,None].detach().cpu().numpy()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()        
             weights_sum += sample_weights.detach().cpu().numpy()
             del out
         
         rgb = rgb / weights_sum.reshape(H, W, 1,1)
         depth = depth / weights_sum.reshape(H, W)
-        depth_viz = depth_viz / weights_sum.reshape(H, W)        
+        opacity = opacity/weights_sum.reshape(H,W)
+        depth_viz = depth_viz / weights_sum.reshape(H, W)     
+        depth_image = depth * opacity   
         gt_pixs = gt_pixs.reshape(H, W, self.dataset.n_bins, 3)
         lm = correlate1d(gt_pixs[..., 0], self.dataset.laser.cpu().numpy(), axis=-1)
         exr_depth = np.argmax(lm, axis=-1)
@@ -305,6 +308,7 @@ class CapturedNeRFSystem(BaseSystem):
         #9. KL divergence between transient images normalized vs predicted images normalized
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=0.8, vmax=1.5)
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_viz, cmap='inferno', vmin=0.8, vmax=1.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_image.png"), depth_image, cmap='inferno', vmin=0.8, vmax=1.5)
         
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
