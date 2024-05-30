@@ -30,7 +30,6 @@ class CapturedNeRFSystem(BaseSystem):
     2. rank_zero_info: use the logging module
     """
     def prepare(self):
-        #TODO: Implement metrics without the percentage error first 
         self.criterions = {
             'l1_depth': L1_depth(),
             'MSE_depth': MSE_depth(),
@@ -171,8 +170,8 @@ class CapturedNeRFSystem(BaseSystem):
         gt_pixs = torch.log(gt_pixs + 1) #(num_ray,n_bins,RGB)
         predicted_rgb = torch.log(rgb + 1) # (num_rays, n_bins, RGB)
 
-        #normal loss
-        loss_rgb = F.l1_loss(predicted_rgb.mean(-1)[alive_ray_mask], gt_pixs[...,0][alive_ray_mask])
+        #photometrics loss
+        loss_rgb = F.l1_loss(predicted_rgb[alive_ray_mask], gt_pixs[alive_ray_mask])
         self.log('train/loss_rgb', loss_rgb)
         loss += loss_rgb * self.C(self.config.system.loss.lambda_rgb)
         
@@ -206,9 +205,8 @@ class CapturedNeRFSystem(BaseSystem):
         predicted_image = torch.stack([predicted_image, predicted_image, predicted_image], -1) #(512,512,3)
         predicted_image = (predicted_image/predicted_image.max())**(1/2.2) #(512,512,3)
         W, H = self.dataset.img_wh
-        depth_image = (out["depth"]*torch.squeeze(out["opacity"])).view(H,W)
-        depth_image = imgviz.depth2rgb(depth_image.numpy(), colormap="inferno")
         
+        depth_image = (out["depth"]*torch.squeeze(out["opacity"])).view(H,W)
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': predicted_image.view(H, W, 3), 'kwargs': {'data_format': 'HWC'}},
             {'type': 'grayscale', 'img': depth_image, 'kwargs': {}}
@@ -307,10 +305,12 @@ class CapturedNeRFSystem(BaseSystem):
         #9. KL divergence between transient images normalized vs predicted images normalized
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=0.8, vmax=1.5)
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_viz, cmap='inferno', vmin=0.8, vmax=1.5)
+        
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image.numpy()*255.0).astype(np.uint8))
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (ground_truth_image.numpy()*255.0).astype(np.uint8))
+        
         self.save_image_plot_grid(f"it{self.global_step}-test/{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': rgb_image, 'kwargs': {"title": "Predicted Integrated Transient"}},
             {'type': 'rgb', 'img': ground_truth_image, 'kwargs': {"title": "Ground Truth Integrated Transient"}},

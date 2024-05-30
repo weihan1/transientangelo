@@ -260,11 +260,11 @@ class CapturedNeuSSystem(BaseSystem):
         # integrated_pred /= integrated_pred.max()
         # integrated_pred = integrated_pred**(1/2.2)
         
-        loss_integrated = F.l1_loss(integrated_pred.mean(-1), integrated_gt[...,0], reduction="mean") #the integrated pred are not monochromatic so we average them 
+        loss_integrated = F.l1_loss(integrated_pred, integrated_gt, reduction="mean") #the integrated pred are not monochromatic so we average them 
         loss += loss_integrated * self.C(self.config.system.loss.lambda_integrated_l1)
         
         #photometric loss
-        loss_rgb_l1 = F.l1_loss(predicted_rgb.mean(-1)[alive_ray_mask], gt_pixs[...,0][alive_ray_mask])
+        loss_rgb_l1 = F.l1_loss(predicted_rgb[alive_ray_mask], gt_pixs[alive_ray_mask])
         self.log('train/loss_rgb', loss_rgb_l1)
         loss += loss_rgb_l1 * self.C(self.config.system.loss.lambda_rgb_l1)
 
@@ -309,8 +309,6 @@ class CapturedNeuSSystem(BaseSystem):
         W, H = self.dataset.img_wh
         
         depth_image = (out["depth"]*torch.squeeze(out["opacity"])).view(H,W)
-        depth_image = imgviz.depth2rgb(depth_image.numpy(), colormap="inferno")
-        
         
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': predicted_image.view(H, W, 3), 'kwargs': {'data_format': 'HWC'}},
