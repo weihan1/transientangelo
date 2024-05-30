@@ -359,8 +359,8 @@ class LearnRays(torch.nn.Module):
         Perform bilinear interpolation to estimate the value of the function f(x, y)
         at the continuous point (x0, y0), given that f is known at integer values of x, y.
         """
-        if (y1>self.img_shape[0]-1).any() or (x1>self.img_shape[0]-1).any():
-            print("hello")
+        # if (y1>self.img_shape[0]-1).any() or (x1>self.img_shape[0]-1).any():
+        #     print("hello")
         x1, y1 = torch.clip(x1, 0, self.img_shape[0]-1), torch.clip(y1, 0, self.img_shape[0]-1)
 
         # x2, y2 = torch.clip(x2, 0, self.img_shape[0]-1), torch.clip(y2, 0, self.img_shape[0]-1)

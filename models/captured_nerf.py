@@ -105,7 +105,7 @@ class CapturedNeRFModel(BaseModel):
         rgb = torch.exp(rgb) - 1 #taking exp again as double exp enforces non-negativity
         weights_non_squared = render_weight_from_density(t_starts, t_ends, density[...,None], ray_indices=ray_indices, n_rays=n_rays) 
         only_weights = weights_non_squared
-        alphas = (1 - torch.exp(-2*density[...,None] * (t_ends - t_starts)))/2 # new formula
+        alphas = (1 - torch.exp(-density[...,None] * (t_ends - t_starts))) 
         
         
         '''
