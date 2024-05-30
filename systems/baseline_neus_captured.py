@@ -297,12 +297,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
             self.log('train/loss_curvature', loss_curvature)
             loss += loss_curvature * self.C(self.config.system.loss.lambda_curvature)
 
-        losses_model_reg = self.model.regularizations(out)
-        for name, value in losses_model_reg.items():
-            self.log(f'train/loss_{name}', value)
-            loss_ = value * self.C(self.config.system.loss[f"lambda_{name}"])
-            loss += loss_
-        
         self.log('train/inv_s', out['inv_s'], prog_bar=True)
 
         self.log('train/num_rays', float(self.train_num_rays), prog_bar=True)
@@ -326,8 +320,6 @@ class BaselineNeusCapturedSystem(BaseSystem):
     def validation_step(self, batch, batch_idx):
         out = self(batch)
         W, H = self.dataset.img_wh
-        np.save(self.get_save_path(f"it{self.global_step}-{batch['index'][0].item()}_normal"), out['comp_normal'].view(H, W,3).cpu().numpy())
-        
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': out['comp_rgb_full'].view(H, W, 3), 'kwargs': {'data_format': 'HWC'}}
         ] + ([
