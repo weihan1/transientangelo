@@ -133,7 +133,7 @@ class CapturedNeuSSystem(BaseSystem):
             self.train_rep = torch.tensor(1, dtype=torch.long)
             train_x = train_x.to(self.rank)
             train_y = train_y.to(self.rank)
-            s_x, s_y, weights = spatial_filter(train_x, train_y, sigma=self.dataset.rfilter_sigma, rep = self.dataset.rep, prob_dithering=self.dataset.sample_as_per_distribution, normalize=False)
+            s_x, s_y, weights = spatial_filter(train_x, train_y, sigma=self.dataset.rfilter_sigma, rep = self.dataset.rep, prob_dithering=self.dataset.sample_as_per_distribution)
             s_x = (torch.clip(train_x + torch.from_numpy(s_x).to(self.rank), 0, self.dataset.w).to(torch.float32))
             s_y = (torch.clip(train_y + torch.from_numpy(s_y).to(self.rank), 0, self.dataset.h).to(torch.float32))
             weights = torch.Tensor(weights).to(self.rank)
@@ -405,6 +405,8 @@ class CapturedNeuSSystem(BaseSystem):
         
         #5. PSNR between transient images vs predicted images
         psnr = self.criterions["psnr"](data_image.cpu(), rgb_image)
+        if np.isnan(psnr).any():
+            print("psnr is nan here")
         
         #7. SSIM between transient images vs predicted images
         ssim = torch.tensor(self.criterions["SSIM"](data_image.detach().cpu().numpy(), rgb_image.detach().cpu().numpy()), dtype=torch.float64)
