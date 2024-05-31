@@ -392,8 +392,8 @@ class CapturedNeuSSystem(BaseSystem):
         
         #3. First get the transient images, sum across all transients (dim=-2) and gamma correct (gt and predicted)
         scaling = self.dataset.focal
-        rgb_image = torch.from_numpy(rgb.sum(axis=-2))
-        rgb_image = (rgb_image*self.dataset.transient_scale/self.dataset.div_vals[self.config.dataset.scene]) ** (1 / 2.2)
+        rgb_image = torch.from_numpy(rgb.sum(axis=-2)) * self.dataset.transient_scale/self.dataset.div_vals[self.config.dataset.scene]
+        rgb_image = torch.clip(rgb_image, 0, 1) ** (1 / 2.2)
         data_image = torch.from_numpy(gt_pixs.sum(axis=-2))
         data_image = ((scaling * data_image/self.dataset.div_vals[self.config.dataset.scene]) ** (1 / 2.2)).to(torch.float64)
     
