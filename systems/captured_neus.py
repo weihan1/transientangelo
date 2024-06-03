@@ -359,14 +359,10 @@ class CapturedNeuSSystem(BaseSystem):
             depth_viz += (out["depth"]*sample_weights.detach().cpu()*torch.squeeze((out["opacity"]>0))).reshape(H, W).detach().cpu().numpy()
             opacity += (torch.squeeze(out["opacity"]) *sample_weights.detach().cpu().numpy()).reshape(H,W).detach().cpu().numpy()
             rgb += (out["rgb"] * sample_weights[:,None][:,None].detach().cpu().numpy()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()
-            if np.isnan(rgb).any():
-                print("rgb is nan here")   
             weights_sum += sample_weights.detach().cpu().numpy()
             del out
         
         rgb = rgb / weights_sum.reshape(H, W, 1,1) #(H,W,1500,3)
-        if np.isnan(rgb).any():
-            print("rgb is nan here")   
             
         depth = depth / weights_sum.reshape(H, W)
         opacity = opacity/weights_sum.reshape(H,W)
