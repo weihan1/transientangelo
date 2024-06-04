@@ -94,12 +94,6 @@ class BaseImplicitGeometry(BaseModel):
         level = chunk_batch(batch_func, self.config.isosurface.chunk, True, self.helper.grid_vertices()) #same shape as grid_vertices
         
         mesh = self.helper(level, threshold=self.config.isosurface.threshold)
-        # while len(mesh["v_pos"]) == 0:
-        #     print("Warning: No mesh vertices found, reducing the threshold by half.")
-        #     self.config.isosurface.threshold //= 2 
-        #     mesh = self.helper(level, threshold=self.config.isosurface.threshold)
-            # if self.config.isosurface.threshold == 0:
-            #     raise ValueError("Threhold is 0 and no mesh vertices found.")
         if torch.isnan(mesh['v_pos']).any():
             print("Warning: NaNs found in the mesh. Removing them and reshifting the faces.")
             #Find any NaNs in the mesh and remove them and the corresponding faces
