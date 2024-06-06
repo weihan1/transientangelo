@@ -303,7 +303,11 @@ class TransientNeRFSystem(BaseSystem):
         #This computes metrics for each image individually, the next method aggregates all
         W, H = self.dataset.img_wh
         meta_data = self.dataset.meta
-        
+        mesh_path = self.export()
+        self.print("Calculating Chamfer Distance...")
+        chamfer_distance = calculate_chamfer_distance(mesh_path, self.config.export.ref_mesh_path, self.config.export.num_samples)
+        print(chamfer_distance)
+        exit(1)
         # #Initialize all gt tensors
         gt_pixs = batch["rgb"].view(H, W, self.dataset.n_bins,3).detach().cpu().numpy()
         # #Get predicted and ground_truth depth 

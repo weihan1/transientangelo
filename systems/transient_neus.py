@@ -91,22 +91,6 @@ class TransientNeuSSystem(BaseSystem):
             s_y = torch.clip(train_y + torch.from_numpy(train_sy).to(self.rank), 0, self.dataset.h)
             weights = torch.Tensor(weights).to(self.rank)
             
-            
-            #NOTE: Use this when we need to visualize a patch of rays of the image
-            if self.config.model.use_patch_training:
-                training_patch_size = 64
-                start_y = torch.randint(0, self.dataset.h - training_patch_size, size=(1,)).item()
-                start_x = torch.randint(0, self.dataset.w - training_patch_size, size=(1,)).item()
-                rows = torch.arange(start_y, start_y + training_patch_size, device=self.rank)
-                cols = torch.arange(start_x, start_x+ training_patch_size, device=self.rank)
-                train_patch_x, train_patch_y = torch.meshgrid(rows, cols, indexing="xy")
-                train_patch_x, train_patch_y = train_patch_x.flatten(), train_patch_y.flatten()
-                train_patch_sx, train_patch_sy, _ = spatial_filter(train_patch_x, train_patch_y, sigma=self.dataset.rfilter_sigma , rep = 1, prob_dithering=self.dataset.sample_as_per_distribution)
-                train_patch_sx = torch.clip(train_patch_x + torch.from_numpy(train_patch_sx).to(self.rank), 0, self.dataset.w) 
-                train_patch_sy = torch.clip(train_patch_y + torch.from_numpy(train_patch_sy).to(self.rank), 0, self.dataset.h)
-                s_x, s_y = torch.cat([s_x, train_patch_sx], dim=0), torch.cat([s_y, train_patch_sy], dim=0)
-                
-                
             if self.config.model.use_reg_nerf:
                 #NOTE: the regnerf patch rays are always concatenated at the end
                 patch_size = self.config.model.train_patch_size 
@@ -257,7 +241,6 @@ class TransientNeuSSystem(BaseSystem):
                     v10 = depth_patch[1:, :-1]
                     smoothness_loss = (torch.sum(((v00 - v01) ** 2) + ((v00 - v10) ** 2))).item()
                     loss += smoothness_loss * self.C(self.config.system.loss.lambda_depth_smoothness)
-                    
                     loss += depth_variance_patch.mean() * self.C(self.config.system.loss.lambda_regnerf_depth_variance)
                     
                 if self.config.model.sparse_rays_size > 0:
@@ -449,7 +432,7 @@ class TransientNeuSSystem(BaseSystem):
         rgb = np.zeros((H, W, self.dataset.n_bins, 3))
         depth = np.zeros((H, W))
         depth_viz = np.zeros((H, W))
-        
+        opacity = np.zeros((H, W))
                 
         rep_number=30
         for j in range(rep_number):
@@ -459,6 +442,7 @@ class TransientNeuSSystem(BaseSystem):
             depth += ((torch.squeeze(out["depth"])*sample_weights.detach().cpu()).reshape(W, H)).detach().cpu().numpy()
             rgb += (out["rgb"] * sample_weights[:, None][:, None].detach().cpu()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()        
             depth_viz += (out["depth"]*sample_weights.detach().cpu()*torch.squeeze((out["opacity"]>0))).reshape(H, W).detach().cpu().numpy()
+            opacity += (torch.squeeze(out["opacity"]) *sample_weights.detach().cpu().numpy()).reshape(H,W).detach().cpu().numpy()
             weights_sum += sample_weights.detach().cpu().numpy()
             del out
             
@@ -470,6 +454,7 @@ class TransientNeuSSystem(BaseSystem):
         mask = (gt_pixs.sum((-1, -2)) > 0) # (H,W)
         # #1. Calculate the L1 and MSE error b/w rendered depth vs gt depths (gt depths can be extracted using the get_gt_depth function)
         l1_depth = self.criterions["l1_depth"](exr_depth, depth, mask)
+        depth_image = depth*opacity
         # # MSE_depth = self.criterions["MSE_depth"](exr_depth, depth, mask)
         
         # #2. Calculate the L1 and MSE error b/w lg_depth from predicted transient and gt depth
@@ -511,6 +496,7 @@ class TransientNeuSSystem(BaseSystem):
         exr_depth[exr_depth == exr_depth[0][0]] = 0
         
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=2.5, vmax=5.5)
+        plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_image.png"), depth_image, cmap='inferno', vmin=2.2, vmax=5.5)
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_viz, cmap='inferno', vmin=2.2, vmax=5.5)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
         np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
