@@ -353,7 +353,7 @@ class TransientNeuSModel(BaseModel):
             "sdf_grad_samples_patch": sdf_grad,
             "num_samples_regnerf": len(ray_indices),
             "weights_patch": only_weights.view(-1),
-            "points_patch": midpoints.view(-1),
+            "midpoints_patch": midpoints.view(-1),
             "intervals_patch": intervals.view(-1),
             "ray_indices_patch": ray_indices.view(-1),
         })
@@ -373,7 +373,6 @@ class TransientNeuSModel(BaseModel):
             normal = F.normalize(sdf_grad, p=2, dim=-1)
             alpha = self.get_alpha(sdf, normal, t_dirs, t_ends - t_starts)
             return alpha[...,None]
-        #TODO: implement the sampling trick proposed in https://proceedings.neurips.cc/paper_files/paper/2023/file/b29ab822442a1616f9bd390fddf6e425-Supplemental-Conference.pdf
         
         with torch.no_grad():
             ray_indices, t_starts, t_ends = ray_marching(
@@ -494,7 +493,9 @@ class TransientNeuSModel(BaseModel):
             'distances_from_origin': distances_from_origin,
             'normal': normal,
             'comp_normal':comp_normal,
-            'surface_normal': surface_normals
+            'surface_normal': surface_normals,
+            't_ends': t_ends,
+            't_starts': t_starts
         }
         
         
@@ -502,10 +503,9 @@ class TransientNeuSModel(BaseModel):
             out.update({
                 'sdf_grad_samples': sdf_grad,
                 'comp_weights': comp_weights,
-                'points': midpoints.view(-1),
                 'intervals': intervals.view(-1),
                 'depth_variance': depth_variance,
-                'alpha_samples': alpha
+                'alpha_samples': alpha,
             })
             if self.config.geometry.grad_type == 'finite_difference':
                 out.update({

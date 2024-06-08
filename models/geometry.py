@@ -171,7 +171,6 @@ class VolumeSDF(BaseImplicitGeometry):
         self.finite_difference_eps = self.config.get('finite_difference_eps', 1e-3)
         self.register_buffer('_finite_difference_eps', torch.zeros(1, dtype=torch.float32))
 
-        
         # the actual value used in training
         # will update at certain steps if finite_difference_eps="progressive"
         if self.grad_type == 'finite_difference' and isinstance(self.finite_difference_eps, float):
