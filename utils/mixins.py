@@ -12,7 +12,7 @@ import json
 from prettytable import PrettyTable
 import torch
 import matplotlib.patches as patches
-
+from nerfacc import accumulate_along_rays
 from utils.obj import write_obj
 
 
@@ -434,7 +434,7 @@ class SaverMixin():
         # Plot the transients for the selected points
         for i in range(n_points):
             ax = fig.add_subplot(gs[0, i+1])  # Create each subsequent subplot
-            selected_transient = transient[point_y[i], point_x[i], :, channel]
+            selected_transient = transient[point_y[i], point_x[i], :, channel] #The convention for indexing is (y,x) whereas for plotting is (x,y)
             argmax_index = np.argmax(selected_transient)
             ax.plot(selected_transient)
             ax.set_title(f'Plot {i+1} - {point_x[i], point_y[i]}')
@@ -452,54 +452,67 @@ class SaverMixin():
         plt.close(fig)
         
         
-    # def save_weight_grid(self, filename, transient, weights, ray_indices, global_step):
-    #     '''
-    #     Plot the weights of the selected points
-    #     '''
-    #     height = transient.shape[0]
-    #     n_points = len(point_x)
-    #     fig = plt.figure(figsize=(20, 5))
-    #     gs = GridSpec(1, n_points + 1, width_ratios=[3] + [1]*n_points)  # First subplot 3 times wider
-    #     integrated_transient = transient.sum(-2)  # sums along the time dimension to get the integrated transient
-    #     integrated_transient = (integrated_transient / integrated_transient.max()) ** (1 / 2.2)  # gamma correct it
+    def save_weight_grid(self, filename, point_x, point_y, transient, weights, depth, exposure_time, distances_from_origin, ray_indices, t_ends, t_starts, global_step):
+        '''
+        Plot the weight distribution of the selected points for each point (point_x, point_y)
+        '''
+        height = transient.shape[0]
+        n_points = len(point_x)
+        fig = plt.figure(figsize=(20, 5))
+        gs = GridSpec(1, n_points + 1, width_ratios=[3] + [1]*n_points)  # First subplot 3 times wider
+        integrated_transient = transient.sum(-2)  # sums along the time dimension to get the integrated transient
+        integrated_transient = (integrated_transient / integrated_transient.max()) ** (1 / 2.2)  # gamma correct it
+        variance = ((t_ends - depth[ray_indices]) ** 2 + (t_ends - depth[ray_indices])*(t_starts - depth[ray_indices]) + (t_starts - depth[ray_indices]) ** 2)/3
+        # Plot the integrated transient in a larger subplot
+        ax0 = fig.add_subplot(gs[0, 0])
+        ax0.imshow(integrated_transient)
+        for i in range(n_points):
+            ax0.scatter(point_x[i], point_y[i], color="red")
+        ax0.set_title(f'Integrated transient at {global_step} steps')
         
-    #     # Plot the integrated transient in a larger subplot
-    #     ax0 = fig.add_subplot(gs[0, 0])
-    #     ax0.imshow(integrated_transient)
-    #     for i in range(n_points):
-    #         ax0.scatter(point_x[i], point_y[i], color="red")
-    #     ax0.set_title(f'Integrated transient at {global_step} steps')
-        
-    #     for i in range(n_points):
-    #         ax = fig.add_subplot(gs[0, i+1])  # Create each subsequent subplot
-    #         #convert point_y[i], point_x[i] into the specific ray index
+        for i in range(n_points):
+            ax = fig.add_subplot(gs[0, i+1])  # Create each subsequent subplot
+            #Find the ray index for the selected point
+            linear_index = point_y[i] * height + point_x[i]
+            ray_index = torch.where(ray_indices == linear_index)[0]
             
-    #         #Find the ray index for the selected point
-    #         linear_index=point_y[i]*height+point_x[i]
-    #         ray_index = ray_indices[ray_indices == linear_index]
-    #         selected_weight = weights[ray_index]
-    #         ax.plot(selected_weight)
-    #         ax.set_title(f'Plot {i+1} - {point_x[i], point_y[i]}')
-    #         ax.set_xlabel('Time')
-    #         ax.set_ylabel('Weights')
+            #Selecting the corresponding samples/ray
+            selected_weight = weights[ray_index]
+            selected_variance = torch.squeeze(variance[ray_index])
+            selected_distances = distances_from_origin[ray_index]*2/exposure_time
+            selected_depth = depth[linear_index]
+            depth_variance = (selected_weight*selected_variance).mean() #Calculate the depth variance for one ray
             
-    #     plt.tight_layout()
-    #     plt.savefig(self.get_save_path(filename))
-    #     plt.close(fig)
+            ax.plot(selected_distances, selected_weight)
+            ax.text(0.05, 0.95, f'Depth Variance: {depth_variance.item():.5f}', transform=ax.transAxes, fontsize=8.5, verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", edgecolor='gray', facecolor='white', alpha=0.5))
+            plt.axvline(x=(selected_depth*2/exposure_time).item(), color='r', linestyle='--', label='Predicted depth')
+            ax.set_title(f'Plot {i+1} - {point_x[i], point_y[i]}')
+            ax.set_xlabel('Dists')
+            ax.set_ylabel('Weights')
+        plt.tight_layout()
+        plt.savefig(self.get_save_path(filename))
+        plt.close(fig)
         
-        
-    def save_weight_plot(self, filename, weights, exposure_time, distances_from_origin, depth, ray_indices, alive_ray_mask):
+    def save_weight_plot(self, filename, weights, exposure_time, distances_from_origin, depth, ray_indices, alive_ray_mask=None, depth_variance=None):
         '''
         Plot the weights plot as a function of the distances from the origin and depth
         '''
         #Find the first ray that is visible and plot the SDFs of that ray
-        first_alive_ray = torch.nonzero(alive_ray_mask)[0]
+        if isinstance(alive_ray_mask, torch.Tensor):
+            first_alive_ray = torch.nonzero(alive_ray_mask)[0]
+        else:
+            first_alive_ray = 0
         distances_from_origin = distances_from_origin[ray_indices == first_alive_ray]
         weights = weights[ray_indices == first_alive_ray]
-        
         distances_from_origin = 2 * distances_from_origin / exposure_time
+        
         plt.plot(distances_from_origin.cpu().detach().numpy(), weights.cpu().detach().numpy(), label='Weights')
-        plt.axvline(x=(depth[0]*2/exposure_time).detach().cpu().numpy(), color='r', linestyle='--', label='Predicted depth')
+        if isinstance(depth_variance, torch.Tensor):
+            x_pos = distances_from_origin.mean().cpu().detach().numpy()
+            y_pos = weights.max().cpu().detach().numpy() * 0.5  # Placing text at 50% of max weight for visibility
+            plt.text(x_pos, y_pos, f'Variance: {depth_variance[first_alive_ray].item():.2f}')
+            
+        plt.axvline(x=(depth[first_alive_ray]*2/exposure_time).detach().cpu().numpy(), color='r', linestyle='--', label='Predicted depth')
         plt.legend()
         plt.title("Predicted weights along the first ray")
         
