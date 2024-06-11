@@ -5,6 +5,7 @@ from torch_efficient_distloss import flatten_eff_distloss
 import numpy as np
 from scipy.ndimage import correlate1d
 import os
+import math
 import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.rank_zero import rank_zero_info, rank_zero_debug
@@ -278,6 +279,10 @@ class CapturedNeuSSystem(BaseSystem):
         self.log('train/loss_eikonal', loss_eikonal, prog_bar=True)
         loss += loss_eikonal * self.C(self.config.system.loss.lambda_eikonal)
         
+        loss_sparsity = torch.exp(-self.config.system.loss.sparsity_scale * out['sdf_samples'].abs()).mean()
+        self.log('train/loss_sparsity', loss_sparsity)
+        loss += loss_sparsity * self.C(self.config.system.loss.lambda_sparsity)
+        
         self.log('train/inv_s', out['inv_s'], prog_bar=True) 
         
         self.log('train/num_rays', float(self.train_num_rays), prog_bar=True)
@@ -300,11 +305,33 @@ class CapturedNeuSSystem(BaseSystem):
     
     def validation_step(self, batch, batch_idx):
         out = self(batch)
+        
         predicted_image = out["rgb"].reshape(self.dataset.w, self.dataset.h, self.model.n_bins, 3)  #(512, 512, 1500, 3)
         predicted_image = predicted_image.sum(-2)   #(512,512,3)
         predicted_image = predicted_image.mean(-1) #(512,512)
         predicted_image = torch.stack([predicted_image, predicted_image, predicted_image], -1) #(512,512,3)
         predicted_image = (predicted_image/predicted_image.max())**(1/2.2) #(512,512,3)
+        
+        W, H = math.sqrt(predicted_image.shape[0]), math.sqrt(predicted_image.shape[0])
+
+        if W.is_integer() and H.is_integer():
+            W,H = int(W), int(H)
+        else:
+            self.print("W or H is not an integer")
+            return True
+        
+        point_x_patch, point_y_patch = np.meshgrid(np.arange(W//2, W//2 + 3),np.arange(H//2, H//2 + 3),indexing="xy")
+        point_x_patch, point_y_patch = point_x_patch.flatten(), point_y_patch.flatten()
+        self.save_plot_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_patch_transient", point_x_patch, point_y_patch, out["rgb"].view(W,H,self.model.n_bins,3),self.global_step)
+        self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_patch_weight", point_x_patch[3:6], point_y_patch[3:6], out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["depth"], self.model.exposure_time, out["distances_from_origin"], out["ray_indices"], out["t_ends"], out["t_starts"], self.global_step)
+        
+        #Sample 9 points, 3 from the top, 3 from the middle and 3 from the bottom
+        point_x = np.array([W//4,W//2,3*W//4,W//4,W//2,3*W//4,W//4,W//2,3*W//4])
+        point_y = np.array([H//4,H//4,H//4,H//2,H//2,H//2,3*H//4,3*H//4,3*H//4])    
+        self.save_plot_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_transient.png", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), self.global_step)
+        self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_weight", point_x[3:6], point_y[3:6], out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["depth"], self.model.exposure_time, out["distances_from_origin"], out["ray_indices"], out["t_ends"], out["t_starts"], self.global_step)
+
+
         
         W, H = self.dataset.img_wh
         

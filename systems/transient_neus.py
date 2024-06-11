@@ -309,6 +309,10 @@ class TransientNeuSSystem(BaseSystem):
         loss_eikonal = ((torch.linalg.norm(out['sdf_grad_samples'], ord=2, dim=-1) - 1.)**2).mean()
         self.log('loss_eikonal', loss_eikonal, prog_bar=True)
         loss += loss_eikonal * self.C(self.config.system.loss.lambda_eikonal)
+        
+        loss_sparsity = torch.exp(-self.config.system.loss.sparsity_scale * out['sdf_samples'].abs()).mean()
+        self.log('train/loss_sparsity', loss_sparsity)
+        loss += loss_sparsity * self.C(self.config.system.loss.lambda_sparsity)
 
         #NOTE: inv_s should be steadily increasing to > 100
         self.log('train/inv_s', out['inv_s'], prog_bar=True) 
