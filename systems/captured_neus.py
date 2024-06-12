@@ -312,13 +312,7 @@ class CapturedNeuSSystem(BaseSystem):
         predicted_image = torch.stack([predicted_image, predicted_image, predicted_image], -1) #(512,512,3)
         predicted_image = (predicted_image/predicted_image.max())**(1/2.2) #(512,512,3)
         
-        W, H = math.sqrt(predicted_image.shape[0]), math.sqrt(predicted_image.shape[0])
-
-        if W.is_integer() and H.is_integer():
-            W,H = int(W), int(H)
-        else:
-            self.print("W or H is not an integer")
-            return True
+        W, H = self.dataset.img_wh
         
         point_x_patch, point_y_patch = np.meshgrid(np.arange(W//2, W//2 + 3),np.arange(H//2, H//2 + 3),indexing="xy")
         point_x_patch, point_y_patch = point_x_patch.flatten(), point_y_patch.flatten()
@@ -331,10 +325,6 @@ class CapturedNeuSSystem(BaseSystem):
         self.save_plot_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_transient.png", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), self.global_step)
         self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_weight", point_x[3:6], point_y[3:6], out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["depth"], self.model.exposure_time, out["distances_from_origin"], out["ray_indices"], out["t_ends"], out["t_starts"], self.global_step)
 
-
-        
-        W, H = self.dataset.img_wh
-        
         depth_image = (out["depth"]*torch.squeeze(out["opacity"])).view(H,W)
         
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [

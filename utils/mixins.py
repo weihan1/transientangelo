@@ -423,7 +423,7 @@ class SaverMixin():
         
         integrated_transient = transient.sum(-2)  # sums along the time dimension to get the integrated transient
         integrated_transient = (integrated_transient / integrated_transient.max()) ** (1 / 2.2)  # gamma correct it
-        
+        integrated_transient = integrated_transient.float()
         # Plot the integrated transient in a larger subplot
         ax0 = fig.add_subplot(gs[0, 0])
         ax0.imshow(integrated_transient)
