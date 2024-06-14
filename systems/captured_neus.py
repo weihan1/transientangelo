@@ -317,13 +317,11 @@ class CapturedNeuSSystem(BaseSystem):
         point_x_patch, point_y_patch = np.meshgrid(np.arange(W//2, W//2 + 3),np.arange(H//2, H//2 + 3),indexing="xy")
         point_x_patch, point_y_patch = point_x_patch.flatten(), point_y_patch.flatten()
         self.save_plot_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_patch_transient", point_x_patch, point_y_patch, out["rgb"].view(W,H,self.model.n_bins,3),self.global_step)
-        self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_patch_weight", point_x_patch[3:6], point_y_patch[3:6], out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["depth"], self.model.exposure_time, out["distances_from_origin"], out["ray_indices"], out["t_ends"], out["t_starts"], self.global_step)
         
         #Sample 9 points, 3 from the top, 3 from the middle and 3 from the bottom
         point_x = np.array([W//4,W//2,3*W//4,W//4,W//2,3*W//4,W//4,W//2,3*W//4])
         point_y = np.array([H//4,H//4,H//4,H//2,H//2,H//2,3*H//4,3*H//4,3*H//4])    
         self.save_plot_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_transient.png", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), self.global_step)
-        self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_weight", point_x[3:6], point_y[3:6], out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["depth"], self.model.exposure_time, out["distances_from_origin"], out["ray_indices"], out["t_ends"], out["t_starts"], self.global_step)
 
         depth_image = (out["depth"]*torch.squeeze(out["opacity"])).view(H,W)
         

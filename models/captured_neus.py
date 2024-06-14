@@ -361,7 +361,12 @@ class CapturedNeuSModel(BaseModel):
             'depth': torch.squeeze(depths),
             'rays_valid': opacity > 0,
             'num_samples': torch.as_tensor([len(t_starts)], dtype=torch.int32, device=rays.device),
-            'rgb': colors #the predicted transients
+            'rgb': colors, #the predicted transients
+            'weights': only_weights.view(-1),
+            'distances_from_origin': distances_from_origin,
+            't_starts': t_starts,
+            't_ends': t_ends,
+            'ray_indices': ray_indices
         }
 
         if self.training:
@@ -374,7 +379,6 @@ class CapturedNeuSModel(BaseModel):
                 'intervals': intervals.view(-1),
                 'ray_indices': ray_indices.view(-1),
                 'weight_variance': weight_variance,
-                'distances_from_origin': distances_from_origin
             })
             if self.config.geometry.grad_type == 'finite_difference':
                 out.update({
