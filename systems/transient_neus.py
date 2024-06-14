@@ -363,7 +363,7 @@ class TransientNeuSSystem(BaseSystem):
         point_x = np.array([W//4,W//2,3*W//4,W//4,W//2,3*W//4,W//4,W//2,3*W//4])
         point_y = np.array([H//4,H//4,H//4,H//2,H//2,H//2,3*H//4,3*H//4,3*H//4])    
         self.save_plot_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_transient.png", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), self.global_step)
-        self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_weight", point_x[3:6], point_y[3:6], out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["depth"], self.model.exposure_time, out["distances_from_origin"], out["ray_indices"], out["t_ends"], out["t_starts"], self.global_step)
+        self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_weight", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["depth"], self.model.exposure_time, out["distances_from_origin"], out["ray_indices"], out["t_ends"], out["t_starts"], self.global_step)
 
 
         # PLotting 
