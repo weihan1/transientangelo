@@ -446,7 +446,7 @@ class TransientNeuSSystem(BaseSystem):
             out = self(batch)
             depth += ((torch.squeeze(out["depth"])*sample_weights.detach().cpu()).reshape(W, H)).detach().cpu().numpy()
             rgb += (out["rgb"] * sample_weights[:, None][:, None].detach().cpu()).reshape(H, W, self.dataset.n_bins, 3).detach().cpu().numpy()        
-            depth_viz += (out["depth"]*sample_weights.detach().cpu()*torch.squeeze((out["opacity"]>0))).reshape(H, W).detach().cpu().numpy()
+            depth_viz += ((torch.squeeze(out["depth"]))*sample_weights.detach().cpu()*torch.squeeze((out["opacity"]>0))).reshape(H, W).detach().cpu().numpy()
             opacity += (torch.squeeze(out["opacity"]) *sample_weights.detach().cpu().numpy()).reshape(H,W).detach().cpu().numpy()
             weights_sum += sample_weights.detach().cpu().numpy()
             del out
