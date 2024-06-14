@@ -294,19 +294,23 @@ class TransientNeuSModel(BaseModel):
         only_weights = weights_non_squared
 
         #NOTE: if only one sample is found, right pad with zeros
-        if t_starts.shape[0] == 1:
-            depths = (t_starts+t_ends)/2
-            left_padding = 0
-            right_padding = self.config.train_patch_size ** 2 - 1
-            depths = F.pad(depths, (left_padding, right_padding), "constant", 0).view(self.config.train_patch_size**2, -1)
-        else:
-            #Reason we adjust this is because some rays don't have samples so the argmax at those rays is the last index
-            out, argmax = scatter_max(torch.squeeze(only_weights), ray_indices, out=torch.zeros(n_rays, device=ray_indices.device)) #both are (n_rays, )
-            argmax[argmax==only_weights.shape[0]] = only_weights.shape[0]-1 #shifting the index to the last index
-            if t_starts.shape[0] > 0:
-                depths = (t_starts+t_ends)[argmax]/2 #(self.config.train_patch_size ** 2, 1)
+        if self.config.use_transient_depth:
+            if t_starts.shape[0] == 1:
+                depths = (t_starts+t_ends)/2
+                left_padding = 0
+                right_padding = self.config.train_patch_size ** 2 - 1
+                depths = F.pad(depths, (left_padding, right_padding), "constant", 0).view(self.config.train_patch_size**2, -1)
             else:
-                depths = out[:, None] 
+                #Reason we adjust this is because some rays don't have samples so the argmax at those rays is the last index
+                out, argmax = scatter_max(torch.squeeze(only_weights), ray_indices, out=torch.zeros(n_rays, device=ray_indices.device)) #both are (n_rays, )
+                argmax[argmax==only_weights.shape[0]] = only_weights.shape[0]-1 #shifting the index to the last index
+                if t_starts.shape[0] > 0:
+                    depths = (t_starts+t_ends)[argmax]/2 #(self.config.train_patch_size ** 2, 1)
+                else:
+                    depths = out[:, None] 
+        else:
+            depths = accumulate_along_rays(only_weights, ray_indices, midpoints, n_rays)
+        
                         
         variance = ((t_ends - depths[ray_indices]) ** 2 + (t_ends - depths[ray_indices])*(t_starts - depths[ray_indices]) + (t_starts - depths[ray_indices]) ** 2)/3
         depth_variance = accumulate_along_rays(weights_non_squared, ray_indices, variance, n_rays)
@@ -415,8 +419,6 @@ class TransientNeuSModel(BaseModel):
         ''' 
 
         # depths = accumulate_along_rays(only_weights,values=(t_starts + t_ends) / 2.0,ray_indices=ray_indices,n_rays=n_rays)   
-        
-        #NOTE: Scatter max fails when there are only one sample so need to handle that separately  
         
         if t_starts.shape[0] == 1:
             #Usually happens in validation
