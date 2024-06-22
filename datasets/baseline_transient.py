@@ -145,7 +145,8 @@ class BaselineDatasetBase():
             except:
                 print("No depth found...Calculating the ground truth depth and normals...🤖")
                 self.all_depths = get_depth_from_transient(self.all_images, 0.01, 3, self.all_fg_masks if self.config.use_mask else None).reshape(-1, self.h, self.w)
-                np.save(f"{self.scene}-{self.num_views}-depths.npy", self.all_depths)
+                mask_ind = "with" if self.config.use_mask else "without "
+                np.save(f"{self.scene}-{self.num_views}-{mask_ind}-depths.npy", self.all_depths)
             self.all_normals = compute_normals(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
                 
         #NOTE: Finding the mean focus point

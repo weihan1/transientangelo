@@ -94,33 +94,47 @@ class TransientDatasetBase():
             
         print(f"Loading the transients for the {self.scene} scene {emoji}!")  
         if self.split == "train" or self.split == "test":
-            if self.config.scale_down_photon_factor == 1: #Normal experiments
-                for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
-                    c2w = torch.from_numpy(np.array(frame['transform_matrix']))
+            if self.split == "train": #during training, you can choose whether to perform the low photon exp
+                if self.config.photon_level == 0: #Normal experiments
+                    for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
+                        c2w = torch.from_numpy(np.array(frame['transform_matrix']))
 
-                    #Verify if the transients are noisy by checking if the background is all zero
-                    self.all_c2w[i] = c2w
-                    number = int(frame["file_path"].split("_")[-1])
-                    transient_path = os.path.join(self.config.root_dir, "out",f"{split}_{number:03d}" + ".h5")
-                    rgba = read_h5(transient_path) #(h,w,1200,4)                    
-                    rgba = torch.from_numpy(rgba)
-                    rgba = torch.clip(rgba, 0, None)            
-                    self.all_images[i] = rgba[...,:3]
-                    
-            else: #Low photon experiments
-                print("Starting the low photon experiments with scale equal to ", self.config.scale_down_photon_factor, "🔦")
-                photon_level = self.config.scale_down_photon_factor
+                        #Verify if the transients are noisy by checking if the background is all zero
+                        self.all_c2w[i] = c2w
+                        number = int(frame["file_path"].split("_")[-1])
+                        transient_path = os.path.join(self.config.root_dir, "out",f"{split}_{number:03d}" + ".h5")
+                        rgba = read_h5(transient_path) #(h,w,1200,4)                    
+                        rgba = torch.from_numpy(rgba)
+                        rgba = torch.clip(rgba, 0, None)            
+                        self.all_images[i] = rgba[...,:3]
+                        
+                else: #Low photon experiments
+                    print("Starting the low photon experiments with scale equal to ", self.config.photon_level, "🔦")
+                    photon_level = self.config.photon_level
+                    photon_dir = "/scratch/ondemand28/weihanluo/transientangelo/clean_transients/simulated"
+                    for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
+                        c2w = torch.from_numpy(np.array(frame['transform_matrix']))
+                        self.all_c2w[i] = c2w
+                        number = int(frame["file_path"].split("_")[-1])
+                        transient_path = os.path.join(photon_dir, self.scene, "clean_transients", f"train_{number:03d}_sampled_{photon_level}.h5")
+                        rgba = read_h5(transient_path) #(h,w,1200,4)
+                        rgba = torch.from_numpy(rgba)
+                        rgba = torch.clip(rgba, 0, None)            
+                        self.all_images[i] = rgba[...,:3]
+                        
+            elif self.split == "test": #in testing, you must use the default transients (aka photon_level = 0)
                 for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
-                    c2w = torch.from_numpy(np.array(frame['transform_matrix']))
-                    self.all_c2w[i] = c2w
-                    number = int(frame["file_path"].split("_")[-1])
-                    transient_path = os.path.join(self.config.root_dir, "clean_transients", f"train_{number:03d}_sampled_{photon_level}.h5")
-                    rgba = read_h5(transient_path) #(h,w,1200,4)
-                    rgba = torch.from_numpy(rgba)
-                    rgba = torch.clip(rgba, 0, None)            
-                    self.all_images[i] = rgba[...,:3]
-                
-                
+                        c2w = torch.from_numpy(np.array(frame['transform_matrix']))
+
+                        self.all_c2w[i] = c2w
+                        number = int(frame["file_path"].split("_")[-1])
+                        transient_path = os.path.join(self.config.root_dir, "out",f"{split}_{number:03d}" + ".h5")
+                        rgba = read_h5(transient_path) #(h,w,1200,4)                    
+                        rgba = torch.from_numpy(rgba)
+                        rgba = torch.clip(rgba, 0, None)            
+                        self.all_images[i] = rgba[...,:3]
+                        
+                        
             self.all_images = torch.from_numpy(self.all_images)  
             self.all_c2w = torch.from_numpy(self.all_c2w)
             self.n_bins = rgba.shape[-2]
