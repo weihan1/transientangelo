@@ -73,7 +73,7 @@ def main():
     pl.seed_everything(config.seed)
 
     
-    print("🚀🚀🚀 NEURIPS 2024 🚀🚀🚀".center(24, "-"))
+    print("🚀🚀🚀 WACV 2024 🚀🚀🚀".center(24, "-"))
     
     print(f"Experiment: {config.tag} 🧪")
     
@@ -97,6 +97,9 @@ def main():
                 **config.checkpoint
             ),
             LearningRateMonitor(logging_interval='step'),
+            # CodeSnapshotCallback(
+            #     config.code_dir, use_version=False
+            # ),
             ConfigSnapshotCallback(
                 config, config.config_dir, use_version=False
             ),
