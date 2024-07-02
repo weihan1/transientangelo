@@ -20,7 +20,7 @@ dataset:
   val_split: "val"
   test_split: "test"
   test_no: 2
-  photon_level: 0 #Options [0, 10, 50, 150, 300, 600], 0 meaning we do not scale down the transients
+  photon_level: 50 #Options [0, 10, 50, 150, 300, 600], 0 meaning we do not scale down the transients
 
 model:
   name: transient-neus
@@ -135,7 +135,7 @@ system:
   name: transient-neus-system
   loss:
     lambda_rgb_l1: 1. 
-    lambda_integrated_l1: 3.e-3
+    lambda_integrated_l1: 6.e-3
     lambda_max_l1: 0.0
     lambda_space_carving: 7.e-3
     lambda_mask: 0.0 

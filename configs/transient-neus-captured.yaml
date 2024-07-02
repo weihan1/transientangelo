@@ -5,10 +5,10 @@ seed: 42
 dataset:
   name: captured_dataset
   scene: ???
-  root_dir: /projects/transientangelo/load/captured_data/${dataset.scene}
+  root_dir: ./load/captured_data/${dataset.scene}
   num_views: two
   gamma: false
-  intrinsics: /projects/transientangelo/load/captured_data/${dataset.scene}/david_calibration_1005/intrinsics_david.npy
+  intrinsics: ./load/captured_data/${dataset.scene}/david_calibration_1005/intrinsics_david.npy
   rfilter_sigma: 0.1
   sample_as_per_distribution: false
   img_wh:

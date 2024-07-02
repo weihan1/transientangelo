@@ -79,7 +79,6 @@ system:
   name: captured-nerf-system
   loss:
     lambda_rgb: 1.
-    lambda_distortion: 0.
     lambda_space_carving: 1.e-2
   optimizer:
     name: AdamW
