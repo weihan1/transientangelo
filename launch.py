@@ -73,7 +73,7 @@ def main():
     pl.seed_everything(config.seed)
 
     
-    print("🚀🚀🚀 WACV 2024 🚀🚀🚀".center(24, "-"))
+    print("🚀🚀🚀 WACV 2025 🚀🚀🚀".center(24, "-"))
     
     print(f"Experiment: {config.tag} 🧪")
     

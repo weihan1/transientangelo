@@ -149,7 +149,7 @@ class TransientDatasetBase():
                 rgba = (rgba*rgba_sum_norm_gamma[..., None, :])/(rgba_sum[..., None, :]+1e-10)
                 
             else: #the images are always normalized, whether in training or testing
-                self.all_images /= torch.max(self.all_images)
+                self.all_images /= torch.max(self.all_images) #Note: the normalization always occurs view-wise
             
             if self.config.downsample:
                 print(f"Using downsampled version of shape {self.w, self.h}")

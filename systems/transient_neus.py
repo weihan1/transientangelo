@@ -440,7 +440,7 @@ class TransientNeuSSystem(BaseSystem):
         opacity = np.zeros((H, W))
                 
         rep_number=30
-        for j in range(rep_number):
+        for j in range(1):
             self.print(f"Rep number {j}")
             sample_weights = batch["weights"]
             out = self(batch)
@@ -472,7 +472,15 @@ class TransientNeuSSystem(BaseSystem):
         # # l1_depth_gt_lm_gt = self.criterions["l1_depth"](exr_depth, gt_depth, mask)
         # # MSE_depth_gt_lm_gt = self.criterions["MSE_depth"](exr_depth, gt_depth, mask)
         
-        #4. Transient IOU
+        #Performing low photon scaling. 
+        if self.config.dataset.photon_level!=0: #NOTE: make sure to use the low photon config when running eval
+            low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/simulated/{self.dataset.scene}/clean_transients"
+            train_max_path = f"{low_photon_dir}/max_{self.dataset.num_views}_{self.dataset.scene}_{self.config.dataset.photon_level}.txt"
+            low_photon_scale_factor_path = f"{low_photon_dir}/scale_factor_{self.dataset.scene}_{self.config.dataset.photon_level}.txt"
+            train_max = np.loadtxt(train_max_path)
+            low_photon_scale = np.loadtxt(low_photon_scale_factor_path)
+            rgb = (rgb*train_max/low_photon_scale)/self.dataset.max.item()
+            
         iou = self.criterions["Transient_IOU"](rgb, gt_pixs)
         
         # #4. First get the transient images, sum across all transients (dim=-2) and gamma correct (gt and predicted)
