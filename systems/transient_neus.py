@@ -440,7 +440,7 @@ class TransientNeuSSystem(BaseSystem):
         opacity = np.zeros((H, W))
                 
         rep_number=30
-        for j in range(1):
+        for j in range(rep_number):
             self.print(f"Rep number {j}")
             sample_weights = batch["weights"]
             out = self(batch)
@@ -473,7 +473,7 @@ class TransientNeuSSystem(BaseSystem):
         # # MSE_depth_gt_lm_gt = self.criterions["MSE_depth"](exr_depth, gt_depth, mask)
         
         #Performing low photon scaling. 
-        if self.config.dataset.photon_level!=0: #NOTE: make sure to use the low photon config when running eval
+        if self.config.dataset.photon_level!=0: #NOTE: when doing eval for low photon exp, make sure to use the low photon config, otherwise scaling will be off
             low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/simulated/{self.dataset.scene}/clean_transients"
             train_max_path = f"{low_photon_dir}/max_{self.dataset.num_views}_{self.dataset.scene}_{self.config.dataset.photon_level}.txt"
             low_photon_scale_factor_path = f"{low_photon_dir}/scale_factor_{self.dataset.scene}_{self.config.dataset.photon_level}.txt"

@@ -123,6 +123,7 @@ class TransientDatasetBase():
                         self.all_images[i] = rgba[...,:3]
                         
             elif self.split == "test": #in testing, you must use the default transients (aka photon_level = 0)
+                print("Starting testing... Loading the normal transients")
                 for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
                         c2w = torch.from_numpy(np.array(frame['transform_matrix']))
 

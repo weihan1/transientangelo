@@ -129,20 +129,54 @@ class CapturedDatasetBase():
         del Z
         
         if self.split == "train" or self.split == "test":
-            for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
-                number = int(frame["file_path"].split("_")[-1])
-                transient_path = os.path.join(self.config.root_dir,f"transient{number:03d}" + ".pt")
-                rgba = torch.load(transient_path).to_dense() #r_i Loads the corresponding transient00i
-                rgba = torch.Tensor(rgba)[..., :3000].float().cpu()
-                rgba = torch.nn.functional.grid_sample(rgba[None, None, ...], grid, align_corners=True).squeeze().cpu()
-                rgba = (rgba[..., 1::2]+ rgba[..., ::2] )/2 #(512,512, 1500)
-                c2w = torch.from_numpy(np.array(frame['transform_matrix']))
-                self.all_c2w[i] = c2w
-                rgba = torch.clip(rgba, 0, None)
-                rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)
-                self.all_images[i] = rgba #(h,w,1500,3)
-            
-                
+            if self.split == "train":
+                if self.config.photon_level == 0:
+                    for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
+                        number = int(frame["file_path"].split("_")[-1])
+                        transient_path = os.path.join(self.config.root_dir,f"transient{number:03d}" + ".pt")
+                        rgba = torch.load(transient_path).to_dense() #r_i Loads the corresponding transient00i
+                        rgba = torch.Tensor(rgba)[..., :3000].float().cpu()
+                        rgba = torch.nn.functional.grid_sample(rgba[None, None, ...], grid, align_corners=True).squeeze().cpu()
+                        rgba = (rgba[..., 1::2]+ rgba[..., ::2] )/2 #(512,512, 1500)
+                        c2w = torch.from_numpy(np.array(frame['transform_matrix']))
+                        self.all_c2w[i] = c2w
+                        rgba = torch.clip(rgba, 0, None)
+                        rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)
+                        self.all_images[i] = rgba #(h,w,1500,3)
+
+                else: #Low photon experiments
+                    print("Starting the low photon experiments with scale equal to ", self.config.photon_level, "🔦")
+                    photon_level = self.config.photon_level
+                    photon_dir = "/scratch/ondemand28/weihanluo/transientangelo/clean_transients/captured"
+                    for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
+                        number = int(frame["file_path"].split("_")[-1])
+                        actual_scene = self.scene.split("_")[0]
+                        transient_path = os.path.join(photon_dir, actual_scene, f"{photon_level}", f"transient_{number:02d}" + ".pt")
+                        rgba = torch.load(transient_path).to_dense() #r_i Loads the corresponding transient00i
+                        rgba = torch.Tensor(rgba)[..., :3000].float().cpu()
+                        rgba = torch.nn.functional.grid_sample(rgba[None, None, ...], grid, align_corners=True).squeeze().cpu()
+                        rgba = (rgba[..., 1::2]+ rgba[..., ::2] )/2 #(512,512, 1500)
+                        c2w = torch.from_numpy(np.array(frame['transform_matrix']))
+                        self.all_c2w[i] = c2w
+                        rgba = torch.clip(rgba, 0, None)
+                        rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)
+                        self.all_images[i] = rgba #(h,w,1500,3)
+                        
+            elif self.split == "test":       
+                for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
+                    number = int(frame["file_path"].split("_")[-1])
+                    transient_path = os.path.join(self.config.root_dir,f"transient{number:03d}" + ".pt")
+                    rgba = torch.load(transient_path).to_dense() #r_i Loads the corresponding transient00i
+                    rgba = torch.Tensor(rgba)[..., :3000].float().cpu()
+                    rgba = torch.nn.functional.grid_sample(rgba[None, None, ...], grid, align_corners=True).squeeze().cpu()
+                    rgba = (rgba[..., 1::2]+ rgba[..., ::2] )/2 #(512,512, 1500)
+                    c2w = torch.from_numpy(np.array(frame['transform_matrix']))
+                    self.all_c2w[i] = c2w
+                    rgba = torch.clip(rgba, 0, None)
+                    rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)
+                    self.all_images[i] = rgba #(h,w,1500,3)
+                    
+                    
             self.all_images = torch.from_numpy(self.all_images)
             self.all_c2w = torch.from_numpy(self.all_c2w)
             np.save(os.path.join(self.config.root_dir, "max.npy"), torch.max(self.all_images).cpu().numpy()) #this saves the max value into max.npy
