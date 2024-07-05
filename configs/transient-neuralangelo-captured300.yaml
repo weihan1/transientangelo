@@ -22,7 +22,7 @@ dataset:
   test_split: "test"
   test_no: 2
   var_increase: 1
-  photon_level: 0
+  photon_level: 300
 
 model:
   name: captured-neus
