@@ -179,8 +179,11 @@ class CapturedDatasetBase():
                     
             self.all_images = torch.from_numpy(self.all_images)
             self.all_c2w = torch.from_numpy(self.all_c2w)
-            np.save(os.path.join(self.config.root_dir, "max.npy"), torch.max(self.all_images).cpu().numpy()) #this saves the max value into max.npy
-            
+            np.save(os.path.join(self.config.root_dir, "max.npy"), torch.max(self.all_images).cpu().numpy())
+            if self.split == "train" and photon_level!=0:
+                preloaded_max_dir = os.path.join(photon_dir, actual_scene, f"{photon_level}", f"{self.n_views}_views_max.npy")
+                preloaded_max = np.load(preloaded_max_dir)
+                assert (torch.max(self.all_images)).numpy() - preloaded_max < 1e-3
             #Normalizing the images
             max = torch.max(self.all_images)
             self.all_images /= max
@@ -247,7 +250,7 @@ class CapturedDataModule(pl.LightningDataModule):
         sampler = None
         return DataLoader(
             dataset, 
-            num_workers=1, 
+            num_workers=os.cpu_count(), 
             batch_size=batch_size,
             pin_memory=True,
             sampler=sampler

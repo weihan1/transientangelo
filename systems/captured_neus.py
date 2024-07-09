@@ -395,20 +395,18 @@ class CapturedNeuSSystem(BaseSystem):
         
         # #2. Calculate the L1 and MSE error b/w lg_depth from predicted transient and gt depth
         # lg_depth = correlate1d(rgb[..., 0], self.dataset.laser.cpu().numpy(), axis=-1)
-        # lg_depth = np.argmax(lg_depth, axis=-1)
         # lg_depth = (lg_depth*self.model.exposure_time)/2
         # l1_depth_gt_lm_ours = self.criterions["l1_depth"](exr_depth, lg_depth, mask)
         # MSE_depth_gt_lm_ours = self.criterions["MSE_depth"](exr_depth, lg_depth, mask)
         
         if self.config.dataset.photon_level!=0:
-            low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/captured/{self.dataset.scene}/{self.config.dataset.photon_level}"
             scene = self.dataset.scene.split("_")[0]
-            train_max_path = f"{low_photon_dir}/{self.dataset.num_views}_views_max.npy"
-            low_photon_scale_factor_paths = f"{low_photon_dir}/scale_factor_{scene}_{self.config.dataset.photon_level}.npy"
+            low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/captured/{scene}/{self.config.dataset.photon_level}"
+            train_max_path = f"{low_photon_dir}/{self.dataset.n_views}_views_max.npy"
+            low_photon_scale_factor_path = f"{low_photon_dir}/scale_factor_{scene}_{self.config.dataset.photon_level}.npy"
             train_max = np.load(train_max_path)
-            low_photon_scale = np.load(low_photon_scale_factor)
-            rgb = (rgb*train_max/low_photon_scale)/self.dataset.max.item()
-        
+            low_photon_scale = np.load(low_photon_scale_factor_path)
+            rgb = (rgb*train_max/low_photon_scale)/self.dataset.focal.item()
         
         #3. First get the transient images, sum across all transients (dim=-2) and gamma correct (gt and predicted)
         scaling = self.dataset.focal
