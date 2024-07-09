@@ -400,6 +400,16 @@ class CapturedNeuSSystem(BaseSystem):
         # l1_depth_gt_lm_ours = self.criterions["l1_depth"](exr_depth, lg_depth, mask)
         # MSE_depth_gt_lm_ours = self.criterions["MSE_depth"](exr_depth, lg_depth, mask)
         
+        if self.config.dataset.photon_level!=0:
+            low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/captured/{self.dataset.scene}/{self.config.dataset.photon_level}"
+            scene = self.dataset.scene.split("_")[0]
+            train_max_path = f"{low_photon_dir}/{self.dataset.num_views}_views_max.npy"
+            low_photon_scale_factor_paths = f"{low_photon_dir}/scale_factor_{scene}_{self.config.dataset.photon_level}.npy"
+            train_max = np.load(train_max_path)
+            low_photon_scale = np.load(low_photon_scale_factor)
+            rgb = (rgb*train_max/low_photon_scale)/self.dataset.max.item()
+        
+        
         #3. First get the transient images, sum across all transients (dim=-2) and gamma correct (gt and predicted)
         scaling = self.dataset.focal
         rgb_image = torch.from_numpy(rgb.sum(axis=-2)) * self.dataset.transient_scale/self.dataset.div_vals[self.config.dataset.scene]
@@ -409,14 +419,7 @@ class CapturedNeuSSystem(BaseSystem):
     
         # #4. MSE between transient images vs predicted images
         # mse = self.criterions["MSE"](ground_truth_image.cpu(), rgb_image)
-        if self.config.dataset.photon_level!=0:
-            low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/captured/{self.dataset.scene}/{self.config.dataset.photon_level}"
-            scene = self.dataset.scene.split("_")[0]
-            train_max_path = f"{low_photon_dir}/{self.dataset.num_views}_views_max.npy"
-            low_photon_scale_factor_paths = f"{low_photon_dir}/scale_factor_{scene}_{self.config.dataset.photon_level}.npy"
-            train_max = np.load(train_max_path)
-            low_photon_scale = np.load(low_photon_scale_factor)
-            rgb = (rgb*train_max/low_photon_scale)/self.dataset.max.item()
+        
         #4. Transient IOU
         iou = self.criterions["Transient_IOU"](rgb, gt_pixs)
         
