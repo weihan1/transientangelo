@@ -423,7 +423,6 @@ class TransientNeuSSystem(BaseSystem):
         W, H = self.dataset.img_wh
         meta_data = self.dataset.meta
         
-        
         # #Initialize all gt tensors
         gt_pixs = batch["rgb"].view(H, W, self.dataset.n_bins,3).detach().cpu().numpy()
         

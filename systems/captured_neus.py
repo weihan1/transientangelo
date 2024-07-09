@@ -357,7 +357,6 @@ class CapturedNeuSSystem(BaseSystem):
         #This computes metrics for each image individually, the next method aggregates all
         W, H = self.dataset.img_wh
         meta_data = self.dataset.meta
-        
         rgb = np.zeros((H, W, self.dataset.n_bins, 3))
         depth = np.zeros((H, W))
         opacity = np.zeros((H,W))
@@ -410,7 +409,14 @@ class CapturedNeuSSystem(BaseSystem):
     
         # #4. MSE between transient images vs predicted images
         # mse = self.criterions["MSE"](ground_truth_image.cpu(), rgb_image)
-        
+        if self.config.dataset.photon_level!=0:
+            low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/captured/{self.dataset.scene}/{self.config.dataset.photon_level}"
+            scene = self.dataset.scene.split("_")[0]
+            train_max_path = f"{low_photon_dir}/{self.dataset.num_views}_views_max.npy"
+            low_photon_scale_factor_paths = f"{low_photon_dir}/scale_factor_{scene}_{self.config.dataset.photon_level}.npy"
+            train_max = np.load(train_max_path)
+            low_photon_scale = np.load(low_photon_scale_factor)
+            rgb = (rgb*train_max/low_photon_scale)/self.dataset.max.item()
         #4. Transient IOU
         iou = self.criterions["Transient_IOU"](rgb, gt_pixs)
         
