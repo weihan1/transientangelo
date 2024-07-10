@@ -95,7 +95,8 @@ model:
       n_neurons: 64
       n_hidden_layers: 2
     color_activation: softplus
-    
+  
+  #Background stuff
   num_samples_per_ray_bg: 64
   geometry_bg:
     name: volume-density

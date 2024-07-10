@@ -1,5 +1,5 @@
 name: transient-neuralangelo-captured-${dataset.scene}
-tag: "${dataset.scene}-${dataset.num_views}-views"
+tag: "${dataset.scene}-${dataset.num_views}-views-${dataset.photon_level}"
 seed: 42
 
 dataset:
@@ -100,10 +100,10 @@ system:
   name: captured-neus-system
   loss:
     lambda_rgb_l1: 1. 
-    lambda_space_carving: 1.e-2 
+    lambda_space_carving: 1.e-2
     lambda_integrated_l1: 3.e-3
     lambda_mask: 0.0 
-    lambda_eikonal: 1.e-5
+    lambda_eikonal: 1.e-6
     lambda_eikonal_patch: 0.0
     lambda_curvature: 0.
     lambda_surface: 0.0
@@ -114,9 +114,9 @@ system:
     lambda_transient_noise: 0.0
     lambda_argmax_consistency: 0.0
     lambda_regnerf_sparse_depth_variance: 0.0
-    lambda_regnerf_depth_variance: 3.e-3
+    lambda_regnerf_depth_variance: 3.e-2
     lambda_depth_variance : 0.0
-    lambda_sparsity: 0.0
+    lambda_sparsity: 1.e-4
     sparsity_scale: 100.
   optimizer:
     name: AdamW
