@@ -15,7 +15,7 @@ import torchvision.transforms.functional as TF
 from PIL import Image
 
 import pytorch_lightning as pl
-
+import matplotlib.pyplot as plt
 import datasets
 from models.ray_utils import get_ray_directions, LearnRays, find_mean_focus_point_regnerf
 from utils.misc import get_rank
