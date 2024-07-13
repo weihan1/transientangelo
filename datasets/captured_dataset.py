@@ -180,7 +180,7 @@ class CapturedDatasetBase():
             self.all_images = torch.from_numpy(self.all_images)
             self.all_c2w = torch.from_numpy(self.all_c2w)
             np.save(os.path.join(self.config.root_dir, "max.npy"), torch.max(self.all_images).cpu().numpy())
-            if self.split == "train" and photon_level!=0:
+            if self.split == "train" and self.config.photon_level!=0:
                 preloaded_max_dir = os.path.join(photon_dir, actual_scene, f"{photon_level}", f"{self.n_views}_views_max.npy")
                 preloaded_max = np.load(preloaded_max_dir)
                 assert (torch.max(self.all_images)).numpy() - preloaded_max < 1e-3
