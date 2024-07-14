@@ -436,9 +436,9 @@ class CapturedNeuSSystem(BaseSystem):
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth.png"), exr_depth, cmap='inferno', vmin=0.8, vmax=1.5)
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth_viz, cmap='inferno', vmin=0.8, vmax=1.5)
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_image.png"), depth_image, cmap='inferno', vmin=0.8, vmax=1.5)
-        if batch["index"][0].item() == 0:
-            np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
-            np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_array"), depth)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_transient_array"), rgb)
+        np.save(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_transient_array"), gt_pixs)
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb_image.numpy()*255.0).astype(np.uint8))
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_gt_RGB.png"), (data_image.numpy()*255.0).astype(np.uint8))
         
