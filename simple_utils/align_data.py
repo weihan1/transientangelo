@@ -219,7 +219,9 @@ def plot_pcs(pcs, normals_list):
         fig.add_trace(trace1)
 
         for point, normal in zip(pc, normals):
-            normal_end = point + 0.01 * normal  # Adjust scaling factor based on your needs
+            if isinstance(normal, torch.Tensor):
+                normal = normal.cpu().numpy()
+            normal_end = point + 0.008 * normal  # Adjust scaling factor based on your needs
             trace2 = go.Scatter3d(
                 x=[point[0], normal_end[0]],
                 y=[point[1], normal_end[1]],
@@ -229,6 +231,14 @@ def plot_pcs(pcs, normals_list):
             )
             fig.add_trace(trace2)
             
+            trace3 = go.Scatter3d(
+                x=[normal_end[0]],
+                y=[normal_end[1]],
+                z=[normal_end[2]],
+                mode='markers',
+                marker=dict(size=3, color=color, symbol='diamond-open')
+                )
+            fig.add_trace(trace3)
     fig.update_layout(
         scene=dict(
             xaxis=dict(range=[-1, 1]),  # Adjust these ranges based on your data
@@ -237,7 +247,8 @@ def plot_pcs(pcs, normals_list):
             camera=dict(
                 up=dict(x=0, y=0, z=1),  # Z-axis is up
                 eye=dict(x=1.25, y=1.25, z=1.25)  # Perspective view
-            )
+            ),
+            aspectmode='cube'  
         ),
         scene_camera_projection=dict(type="perspective")
     )

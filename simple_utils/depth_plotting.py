@@ -6,7 +6,7 @@ import numpy as np
 import os 
 import json 
 from read_depth import read_array
-from align_data import plot_pcs
+from align_data import plot_pcs, plot_pcs_depth
 from scipy.ndimage import correlate1d
 import tqdm
 import matplotlib.pyplot as plt 
@@ -27,6 +27,48 @@ def read_json(fname):
     # camtoworlds = np.stack(camtoworlds, axis=0)
 
     return meta["frames"]
+
+def get_rays_captured_from_images(K, c2w):
+    
+    x, y = torch.meshgrid(
+        torch.arange(512),
+        torch.arange(512),
+        indexing="xy",
+    )
+    
+    x = x.flatten()
+    y = y.flatten()
+    x = x.to(K.rays)
+    y = y.to(K.rays)
+    dirs = K(x, y) 
+    
+    directions = (dirs[:,None, None, :] * c2w[:, :3, :3].to(dirs)).sum(dim=-1)
+    directions = directions.permute(1,0,2)
+    origins = torch.broadcast_to(c2w[:, None, :3, -1], directions.shape)
+    viewdirs = directions / torch.linalg.norm(
+        directions, dim=-1, keepdims=True
+    )
+
+    origins = torch.reshape(origins, (c2w.shape[0], 512, 512, 3))
+    viewdirs = torch.reshape(viewdirs, (c2w.shape[0], 512, 512, 3))
+    return origins, viewdirs
+
+def compute_normals_from_transient_captured(depth_map, origins, viewdirs):
+    '''Compute the normals from the depth map for the captured dataset'''
+    if len(depth_map.shape) != 3:
+        depth_map = depth_map[None, ...]
+    
+    # Compute 3D points
+    points = (depth_map.reshape(262144,1) * viewdirs + origins.reshape(262144,3)).reshape(1, 512, 512, 3)
+    points = torch.from_numpy(points)
+    padded = torch.nn.functional.pad(points, (0, 0, 1, 1, 1, 1), mode='replicate')
+    g_x = (padded[:, 2:, 1:-1] - padded[:, :-2, 1:-1]) / 2 #each of these terms is of shape (n, 512,512,3)
+    g_y = (padded[:, 1:-1, 2:] - padded[:, 1:-1, :-2]) / 2
+    N = torch.cross(g_x, g_y, dim=-1)
+    N_norm = torch.linalg.norm(N, dim=-1, keepdim=True)
+    N_normalized = N / torch.where(N_norm == 0, torch.ones_like(N_norm), N_norm)
+    
+    return N_normalized
 
 class LearnRays(torch.nn.Module):
     '''
@@ -116,20 +158,19 @@ def convolve_colour(color, kernel, n_bins):
 
 def plot_from_depth():
     device = "cuda"
-    dataset_scene = "chef_raxel"
-    intrinsics = f"/scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/captured_data/{dataset_scene}/david_calibration_1005/intrinsics_david.npy"
+    dataset_scene = "cinema_raxel"
+    intrinsics = f"/scratch/ondemand28/weihanluo/transientangelo/load/captured_data/{dataset_scene}/david_calibration_1005/intrinsics_david.npy"
     params = np.load(intrinsics, allow_pickle=True)[()]
     shift = params['shift'].numpy()
     rays = params['rays']
     K = LearnRays(rays, device=device, img_shape=(512,512))
-    json_file = f'/scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/captured_data/{dataset_scene}/final_cams/two_views/unseen_train.json'
-    # depths_path = "/home/anagh/PycharmProjects/multiview_lif/data/cinema_checkerboard_05_02_masked/dense/stereo/depth_maps"
-    # camtoworlds = torch.from_numpy(read_json_poses(json_file))
+    json_file = f"/scratch/ondemand28/weihanluo/transientangelo/load/captured_data/{dataset_scene}/final_cams/two_views/transforms_train.json"
     frames= read_json(json_file)
     
     
     n_bins = 1500
     colmap_pcs = []
+    normals_list = []
     exposure_time = 299792458*4e-12
     x = (torch.arange(512, device="cpu")-512//2+0.5)/(512//2-0.5)
     y = (torch.arange(512, device="cpu")-512//2+0.5)/(512//2-0.5)
@@ -143,29 +184,44 @@ def plot_from_depth():
     del X
     del Y
     del Z
-        
-        
+    laser_pulse_dic = sio.loadmat('/scratch/ondemand28/weihanluo/transientangelo/load/captured_data/pulse_low_flux.mat')['out'].squeeze()
+    laser_pulse = laser_pulse_dic
+    lidx = np.argmax(laser_pulse)
+    loffset = 50
+    laser = laser_pulse[lidx-loffset:lidx+loffset+1]
+    laser = laser / laser.sum()
+    laser = torch.tensor(laser[::-1].copy(), device="cuda").float()
+    laser_kernel = torch_laser_kernel(laser, device="cuda")
+
         
     for camid in range(len(frames)):
+        print(f"frame {camid}")
         frame = frames[camid]
         camtoworld = frame["transform_matrix"]
         camtoworld = torch.from_numpy(np.array(camtoworld))
-        root_dir= "/scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/captured_data/cinema_raxel"
+        root_dir= "/scratch/ondemand28/weihanluo/transientangelo/load/captured_data/cinema_raxel"
         
         number = int(frame["file_path"].split("_")[-1])
         transient_path = os.path.join(root_dir,f"transient{number:03d}" + ".pt")
-        rgba = torch.load(transient_path).to_dense() #r_i Loads the corresponding transient00i
-        rgba = torch.Tensor(rgba)[..., :3000].float().cpu()
-        if rgba.shape[0]==256:
-            rgba = (rgba[::2, ::2] + rgba[::2, 1::2] +  rgba[1::2, ::2]+ rgba[1::2, 1::2] )/4
-        
-        rgba = torch.nn.functional.grid_sample(rgba[None, None, ...], grid, align_corners=True).squeeze().cpu()
-        rgba = (rgba[..., 1::2]+ rgba[..., ::2] )/2 #(512,512, 1500)
-        rgba = torch.clip(rgba, 0, None)
-        rgba[rgba<=1] = 0
-
-        rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)
-        # camtoworld[:2, -1] *= -1
+        try:
+            exr_depth = np.load(f"{dataset_scene}-depths-{camid}.npy")
+        except:
+            print("loaded the transients")
+            rgba = torch.load(transient_path).to_dense() #r_i Loads the corresponding transient00i
+            rgba = torch.Tensor(rgba)[..., :3000].float().cpu()
+            rgba = torch.nn.functional.grid_sample(rgba[None, None, ...], grid, align_corners=True).squeeze().cpu()
+            rgba = (rgba[..., 1::2]+ rgba[..., ::2] )/2 #(512,512, 1500)
+            rgba = torch.clip(rgba, 0, None)
+            rgba[rgba<=1] = 0
+            rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)
+            
+            
+            lm = correlate1d(rgba[..., 0], laser.cpu().numpy(), axis=-1)
+            exr_depth = np.argmax(lm, axis=-1)
+            exr_depth = (exr_depth*2*299792458*4e-12)/2
+            
+            
+        exr_depth = np.ones((512,512))
         img_wh = (512, 512)
         x, y = torch.meshgrid(
                 torch.arange(img_wh[0],device="cuda"),
@@ -176,46 +232,34 @@ def plot_from_depth():
         y = y.flatten()
         camera_dirs = K(x, y) 
         rays_d = (camera_dirs[:, None, :] * camtoworld[:3, :3].to(device)).sum(dim=-1).float()
-        rays_o = torch.broadcast_to(camtoworld[:3, -1], rays_d.shape).to(device)
-
-        filename = frame["file_path"].split("/")[-1][:-2]+"png"
-        exposure_time = 0.002398339664
-        gt_pixs = rgba
+        rays_d = rays_d.cpu().numpy()
+        rays_o = torch.broadcast_to(camtoworld[:3, -1], rays_d.shape).numpy()
+        # rays_o = np.zeros((512,512,3))
+        # exr_depth = np.ones((512,512))
+        normals = torch.squeeze(compute_normals_from_transient_captured(exr_depth, rays_o, rays_d))
+        predicted_normals_path = "/scratch/ondemand28/weihanluo/transientangelo/exp/monosdf-baseline-captured-cinema_raxel/cinema_raxel-two-views@20240521-045658/save/it150000-0_normal.npy"
+        normals_predicted_from_monosdf = np.load(predicted_normals_path)
         
-        laser_pulse_dic = sio.loadmat('/scratch/ondemand28/weihanluo/multiview_transient_project/instant-nsr-pl/load/captured_data/pulse_low_flux.mat')['out'].squeeze()
-        laser_pulse = laser_pulse_dic
-        lidx = np.argmax(laser_pulse)
-        loffset = 50
-        laser = laser_pulse[lidx-loffset:lidx+loffset+1]
-        laser = laser / laser.sum()
-        laser = torch.tensor(laser[::-1].copy(), device="cuda").float()
-        laser_kernel = torch_laser_kernel(laser, device="cuda")
-        
-        lm = correlate1d(gt_pixs[..., 0], laser.cpu().numpy(), axis=-1)
-        exr_depth = np.argmax(lm, axis=-1)
-        exr_depth = (exr_depth*exposure_time)/2
-
-
-        # depth = torch.from_numpy(read_array(f"{depths_path}/{filename}.geometric.bin"))[..., None]
-        
-        # depth = depth2dist(depth, K)
-
-
-        #scale up extrinics
-
-        # get rays
-
-        # convert colmap depth to dist
-        # Note: (this is done when loading now, comment out)
-        # colmap_dists[camid] = depth2dist(colmap_dists[camid], K)
-
-        # get point cloud for colmap and transient
-        # colmap_pc = origins.reshape(-1, 3)
-        # viewdirs = viewdirs/np.abs(viewdirs[..., 2][..., None])
-        # depth = depth/np.abs(viewdirs[..., 2][..., None])
-        colmap_pc = (np.reshape(exr_depth, (262144,1)) * rays_d.cpu().detach().numpy() + rays_o.cpu().detach().numpy()).reshape(-1, 3)
+        print("saving normals")
+        if isinstance(normals, torch.Tensor):
+            normals = normals.cpu().numpy()
+        plt.imshow(normals)
+        plt.savefig(f"{dataset_scene}-normals-{camid}.png")
+        plt.clf()
+        plt.close()
+        if (exr_depth != np.ones((512,512))).all():
+            np.save(f"{dataset_scene}-depths-{camid}.npy", exr_depth)
+        plt.imshow(exr_depth)
+        print("saving depth...")
+        plt.savefig(f"depth_{dataset_scene}_{camid}.png")
+        plt.clf()
+        plt.close()
+        normals_predicted_from_monosdf = normals_predicted_from_monosdf.reshape(262144, 3)
+        colmap_pc = exr_depth.reshape(262144,1) * rays_d + rays_o.reshape(262144,3)
+        normals = normals.reshape(262144,3)
         colmap_mask = (exr_depth < 60).flatten()*(exr_depth >0).flatten()
         colmap_pc = colmap_pc[colmap_mask, :]
+        normals_pc = (normals.reshape(262144,3)[colmap_mask, :])
         # colmap_pc = torch.concat([colmap_pc, origins.reshape(-1, 3)])
         
         # viewdirs[..., 1]*= -1
@@ -224,10 +268,12 @@ def plot_from_depth():
         
         # colmap_pc = (viewdirs[256, 256]*np.linspace(0, 3)[:, None]) + origins[0, 0]
         # colmap_pc = colmap_pc.reshape(-1, 3)
+        normals_list.append(normals_pc)
         colmap_pcs.append(colmap_pc)
         
     colmap_pc = np.concatenate(colmap_pcs, axis=0)
-    plot_pcs([colmap_pc[::90], ])
+    normals_list = np.concatenate(normals_list, axis=0)
+    plot_pcs([colmap_pc[::90], ], [normals_list[::90], ])
 
 
 if __name__=="__main__":
