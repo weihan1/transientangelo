@@ -469,7 +469,10 @@ class CapturedNeuSSystem(BaseSystem):
         out = self.all_gather(out)
         if self.trainer.is_global_zero:
             rank_zero_info("Exporting Mesh...")
-            mesh_path = self.export()
+            try:
+                mesh_path = self.export()
+            except:
+                rank_zero_info("Mesh cannot be exported")
             out_set = {}
             for step_out in out:
                 # DP
