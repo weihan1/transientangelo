@@ -1,4 +1,4 @@
-name: neus_hyas
+name: neus_hyas_backup
 channels:
   - pyg
   - pytorch
@@ -127,4 +127,4 @@ dependencies:
     - wand==0.6.10
     - werkzeug==2.2.2
     - zipp==3.10.0
-prefix: /scratch/ondemand28/weihanluo/miniconda3/envs/neus_hyas
+prefix: /scratch/ondemand28/weihanluo/miniconda3/envs/neus_hyas_backup
