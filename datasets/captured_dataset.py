@@ -13,6 +13,7 @@ import logging
 from torch.utils.data import Dataset, DataLoader, IterableDataset
 import torchvision.transforms.functional as TF
 from PIL import Image
+import cv2
 
 import pytorch_lightning as pl
 import matplotlib.pyplot as plt
@@ -113,6 +114,7 @@ class CapturedDatasetBase():
         # self.all_c2w, self.all_images, self.all_fg_masks = [], [], []
         self.all_images = np.zeros((len(meta['frames']), h, w, self.n_bins, 3))
         self.all_c2w = np.zeros((len(meta['frames']), 4, 4))
+        self.all_fg_masks = np.zeros((len(meta['frames']), h, w))
         
         exposure_time = 299792458*4e-12
         x = (torch.arange(self.w, device="cpu")-self.w//2+0.5)/(self.w//2-0.5)
@@ -142,8 +144,12 @@ class CapturedDatasetBase():
                         self.all_c2w[i] = c2w
                         rgba = torch.clip(rgba, 0, None)
                         rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)
+                        if self.config.use_bkgd_masking:
+                            mask_path = os.path.join(self.config.root_dir, f"train_{number:03d}_mask.png")  
+                            mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+                            rgba = rgba * mask[...,None,None]
+                            print("using masked transients")
                         self.all_images[i] = rgba #(h,w,1500,3)
-
                 else: #Low photon experiments
                     print("Starting the low photon experiments with scale equal to ", self.config.photon_level, "🔦")
                     photon_level = self.config.photon_level
@@ -160,11 +166,18 @@ class CapturedDatasetBase():
                         self.all_c2w[i] = c2w
                         rgba = torch.clip(rgba, 0, None)
                         rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)
+                        if self.config.use_bkgd_masking:
+                            mask_path = os.path.join(self.config.root_dir, f"train_{number:03d}_mask.png")  
+                            mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+                            assert mask.max() == 255
+                            rgba *= (mask[...,None,None]/255)
+                            print("using masked transients")
                         self.all_images[i] = rgba #(h,w,1500,3)
                         
             elif self.split == "test":       
                 for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
                     number = int(frame["file_path"].split("_")[-1])
+                    print(f"loading number {number}")
                     transient_path = os.path.join(self.config.root_dir,f"transient{number:03d}" + ".pt")
                     rgba = torch.load(transient_path).to_dense() #r_i Loads the corresponding transient00i
                     rgba = torch.Tensor(rgba)[..., :3000].float().cpu()

@@ -23,7 +23,8 @@ dataset:
   test_no: 2
   var_increase: 1
   photon_level: 50
-
+  use_bkgd_masking: false
+  
 model:
   name: captured-neus
   radius: 0.4
