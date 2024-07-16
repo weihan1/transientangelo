@@ -45,6 +45,9 @@ def main():
     transient_img_unscaled = gt_transient.sum(-2) #(10,512,512,3)
     sum_of_masked_pixels = np.sum(transient_img_unscaled>0)
     scale_factor = average_intensity_per_pixel*sum_of_masked_pixels/(transient_img_unscaled.sum()) #Solve for the scale factor
+    photon_dir = "/scratch/ondemand28/weihanluo/transientangelo/clean_transients/simulated"
+    outpath = os.path.join(photon_dir, args.scene, "clean_transients")
+    np.savetxt(f"{outpath}/scale_factor_{args.scene}_{average_intensity_per_pixel}.txt", np.array([scale_factor]))
     
     scaled_gt_transient = gt_transient*scale_factor
     scaled_transient_img = scaled_gt_transient.sum(-2) #(10,512,512,3)

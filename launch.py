@@ -82,7 +82,7 @@ def main():
         
     for val in config["system"]["loss"]:
         if config["system"]["loss"][val] > 0:
-            print(f"Using {val}, with weight {config['system']['loss'][val]} 😈")
+            print(f"Using {val}, with weight {config['system']['loss'][val]}")
             
             
 
