@@ -26,7 +26,7 @@ import scipy.io as sio
 from models.utils import torch_laser_kernel
 
 
-class BaselineDatasetCapturedBaseMovie():
+class CapturedDatasetMovieBase():
     def setup(self, config, split):
         '''
         Use this dataset to watch movies
@@ -72,15 +72,26 @@ class BaselineDatasetCapturedBaseMovie():
         W, H = self.config.img_wh
         self.w, self.h = W, H
         self.img_wh = (self.w, self.h)
-        self.meta = meta
         self.near, self.far = self.config.near_plane, self.config.far_plane
         self.num_views = self.config.num_views
-        self.all_c2w = np.zeros((len(meta['frames']), 4, 4))
         self.K = LearnRays(self.rays, device=self.rank, img_shape=self.img_wh).to(self.rank)
         
+        with open(os.path.join(self.config.root_dir, "final_cams", "movie_jsons", f"transforms_movie_combined.json"), "r") as f:
+            meta = json.load(f)
         
+        self.all_c2w = np.zeros((len(meta), 4, 4))
         
-class BaselineDataset(Dataset, BaselineDatasetCapturedBaseMovie):
+        for i,key in enumerate(tqdm(meta, desc=f"Processing {self.split} frames")):
+            try:frame = meta[key]["frames"][0]
+            except:
+                print(key)
+                print('?')
+            c2w = torch.from_numpy(np.array(frame['transform_matrix']))
+            self.all_c2w[i] = c2w
+        self.all_c2w = torch.from_numpy(self.all_c2w)
+        print("FINSIHED LOADING THESE CONFIGS")
+        
+class CapturedMovieDataset(Dataset, CapturedDatasetMovieBase):
     def __init__(self, config, split):
         self.setup(config, split)
 
@@ -93,7 +104,7 @@ class BaselineDataset(Dataset, BaselineDatasetCapturedBaseMovie):
         }
 
 
-class BaselineIterableDataset(IterableDataset, BaselineDatasetCapturedBase):
+class CapturedMovieIterableDataset(IterableDataset, CapturedDatasetMovieBase):
     def __init__(self, config, split):
         self.setup(config, split)
 
@@ -102,21 +113,21 @@ class BaselineIterableDataset(IterableDataset, BaselineDatasetCapturedBase):
             yield {}
 
 
-@datasets.register('baseline-captured-movie')
-class BaselineDataCapturedMovieModule(pl.LightningDataModule):
+@datasets.register('captured-movie')
+class CapturedMovieModule(pl.LightningDataModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
     #sets up the train dataset and the val dataset when you call trainer.fit
     def setup(self, stage=None):
         if stage in [None, 'fit']:
-            self.train_dataset = BaselineIterableDataset(self.config, self.config.train_split)
+            self.train_dataset = CapturedMovieIterableDataset(self.config, self.config.train_split)
         if stage in [None, 'fit', 'validate']:
-            self.val_dataset = BaselineDataset(self.config, self.config.val_split)
+            self.val_dataset = CapturedMovieDataset(self.config, self.config.val_split)
         if stage in [None, 'test']:
-            self.test_dataset = BaselineDataset(self.config, self.config.test_split)
+            self.test_dataset = CapturedMovieDataset(self.config, self.config.test_split)
         if stage in [None, 'predict']:
-            self.predict_dataset = BaselineDataset(self.config, self.config.train_split)
+            self.predict_dataset = CapturedMovieDataset(self.config, self.config.train_split)
 
     def prepare_data(self):
         pass

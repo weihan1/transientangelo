@@ -211,6 +211,15 @@ class SaverMixin():
     def save_state_dict(self, filename, data):
         torch.save(data, self.get_save_path(filename))
     
+    def generate_video(images, output_path, fps):
+    # Determine the width and height of the images
+        writer = imageio.get_writer(output_path, fps=fps)
+        for image in images:
+            writer.append_data(image)
+        writer.close()
+    
+    
+    
     def save_img_sequence(self, filename, img_dir, matcher, save_format='gif', fps=30):
         assert save_format in ['gif', 'mp4']
         if not filename.endswith(save_format):

@@ -13,4 +13,4 @@ def make(name, config):
     return dataset
 
 
-from . import blender, colmap, dtu, transient_blender, captured_dataset, baseline_transient, baseline_captured_transient
+from . import blender, colmap, dtu, transient_blender, captured_dataset, baseline_transient, baseline_captured_transient, captured_dataset_movie
