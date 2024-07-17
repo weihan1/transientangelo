@@ -26,15 +26,11 @@ import scipy.io as sio
 from models.utils import torch_laser_kernel
 
 
-
-
-def read_h5(path):
-    with h5py.File(path, 'r') as f:
-        frames = np.array(f['data'])
-    return frames
-
-class BaselineDatasetCapturedBase():
+class BaselineDatasetCapturedBaseMovie():
     def setup(self, config, split):
+        '''
+        Use this dataset to watch movies
+        '''
         self.config = config
         self.split = split
         print(f"Preparing the {self.split} split! 🏃🏃🏃")
@@ -71,13 +67,7 @@ class BaselineDatasetCapturedBase():
         self.laser = torch.tensor(laser.copy()).float().to(self.rank)
         self.laser_kernel = torch_laser_kernel(self.laser, device=self.rank)
         
-        if self.split in ["train", "val"]:
-            with open(os.path.join(self.config.root_dir, "final_cams", self.config.num_views + "_views", f"transforms_{self.split}.json"), 'r') as f:
-                meta = json.load(f)
-                
-        else: #NOTE: the captured dataset test poses are in a separate folder 
-            with open(os.path.join(self.config.root_dir, "final_cams", "test_jsons", f"transforms_{self.split}.json"), "r") as f:
-                meta = json.load(f)
+
 
         W, H = self.config.img_wh
         self.w, self.h = W, H
@@ -85,88 +75,12 @@ class BaselineDatasetCapturedBase():
         self.meta = meta
         self.near, self.far = self.config.near_plane, self.config.far_plane
         self.num_views = self.config.num_views
-        self.all_images = np.zeros((len(meta['frames']), 512, 512, 1500, 3))
         self.all_c2w = np.zeros((len(meta['frames']), 4, 4))
-        self.all_fg_masks = np.zeros((len(meta['frames']), 512, 512))
-        
-        
-        exposure_time = 299792458*4e-12
-        x = (torch.arange(self.w, device="cpu")-self.w//2+0.5)/(self.w//2-0.5)
-        y = (torch.arange(self.w, device="cpu")-self.w//2+0.5)/(self.w//2-0.5)
-        z = torch.arange(self.n_bins*2, device="cpu").float()
-        X, Y, Z = torch.meshgrid(x, y, z, indexing="xy")
-        Z = Z*exposure_time/2
-        Z = Z - self.shift[0]
-        Z = Z*2/exposure_time
-        Z = (Z-self.n_bins*2//2+0.5)/(self.n_bins*2//2-0.5)
-        grid = torch.stack((Z, X, Y), dim=-1)[None, ...]
-        del X
-        del Y
-        del Z
-        
         self.K = LearnRays(self.rays, device=self.rank, img_shape=self.img_wh).to(self.rank)
-        if self.split == "train" or self.split == "test":
-            for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
-                number = int(frame["file_path"].split("_")[-1])
-                transient_path = os.path.join(self.config.root_dir,f"transient{number:03d}" + ".pt")
-                rgba = torch.load(transient_path).to_dense() #r_i Loads the corresponding transient00i
-                rgba = torch.Tensor(rgba)[..., :3000].float().cpu()
-                rgba = torch.nn.functional.grid_sample(rgba[None, None, ...], grid, align_corners=True).squeeze().cpu()
-                rgba = (rgba[..., 1::2]+ rgba[..., ::2] )/2 #(512,512, 1500)
-                c2w = torch.from_numpy(np.array(frame['transform_matrix']))
-                self.all_c2w[i] = c2w
-                rgba = torch.clip(rgba, 0, None)      
-                rgba = rgba[..., None].repeat(1, 1, 1, 3) #(512,512, 1500, 3)      
-                self.all_images[i] = rgba[...,:3]
-                if self.config.use_mask:
-                    mask_dir = os.path.join(self.config.root_dir, f"train_{number:03d}_mask.png")
-                    mask = cv2.imread(mask_dir, cv2.IMREAD_GRAYSCALE)
-                    self.all_fg_masks[i] = mask
-                
-            
-            self.all_images = torch.from_numpy(self.all_images)
-            self.all_c2w = torch.from_numpy(self.all_c2w)
-            
-            
-            if self.config.scale_down_photon_factor < 1:
-                self.all_images *= self.config.scale_down_photon_factor
-                self.all_images = torch.poisson(self.all_images)
-                
-            
-            self.n_bins = rgba.shape[-2]
-            self.max = torch.max(self.all_images)
-            
-            
-        else: #For validation
-            for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
-                c2w = torch.from_numpy(np.array(frame['transform_matrix']))
-                self.all_c2w[i] = c2w
-            self.all_c2w = torch.from_numpy(self.all_c2w).float()
-            camera_angle_x = float(meta["camera_angle_x"])
-            self.focal = 0.5 * self.w / np.tan(0.5 * camera_angle_x)
-            
-        if self.config.use_gt_depth_normal and self.split == 'train':
-            try:
-                print("Loading saved depth")
-                self.all_depths = np.load(f"{self.scene}-{self.num_views}-depths.npy")
-            except:
-                print("No depth found...Calculating the ground truth depth and normals...🤖")
-                self.all_depths = get_depth_from_transient_captured(self.all_images, self.laser.cpu().numpy(), self.all_fg_masks if self.config.use_mask else None)
-                np.save(f"{self.scene}-{self.num_views}-depths.npy", self.all_depths)
-            self.all_normals = compute_normals_from_transient_captured(self.all_depths.reshape(-1, self.h, self.w), self.K, self.all_c2w)
-            
-        
-        #NOTE: Finding the mean focus point
-        print(f"Finding mean focus point for {self.split} 🤔")
-        known_rotation_matrices = self.all_c2w[:,:3,:3]
-        optical_axes = known_rotation_matrices[...,2]
-        known_camera_locations = self.all_c2w[:, :3, -1]
-        self.mean_focus_point = find_mean_focus_point_regnerf(known_camera_locations, optical_axes)
-        print(f"The mean focus point is {self.mean_focus_point.tolist()} 🤓")
-        print(f"its average distance to existing camera locations is {np.mean(np.linalg.norm(known_camera_locations - self.mean_focus_point, axis=-1))} 📏")
         
         
-class BaselineDataset(Dataset, BaselineDatasetCapturedBase):
+        
+class BaselineDataset(Dataset, BaselineDatasetCapturedBaseMovie):
     def __init__(self, config, split):
         self.setup(config, split)
 
@@ -188,8 +102,8 @@ class BaselineIterableDataset(IterableDataset, BaselineDatasetCapturedBase):
             yield {}
 
 
-@datasets.register('baseline-captured')
-class BaselineDataCapturedModule(pl.LightningDataModule):
+@datasets.register('baseline-captured-movie')
+class BaselineDataCapturedMovieModule(pl.LightningDataModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
