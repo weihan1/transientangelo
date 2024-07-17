@@ -76,8 +76,12 @@ class BaselineDatasetCapturedBase():
                 meta = json.load(f)
                 
         else: #NOTE: the captured dataset test poses are in a separate folder 
-            with open(os.path.join(self.config.root_dir, "final_cams", "test_jsons", f"transforms_{self.split}.json"), "r") as f:
-                meta = json.load(f)
+            if self.config.watch_movie:
+                with open(os.path.join(self.config.root_dir, "final_cams", "movie_jsons", "transforms_movie.jsons"), "r") as f:
+                    meta = json.load(f)
+            else:
+                with open(os.path.join(self.config.root_dir, "final_cams", "test_jsons", f"transforms_{self.split}.json"), "r") as f:
+                    meta = json.load(f)
 
         W, H = self.config.img_wh
         self.w, self.h = W, H

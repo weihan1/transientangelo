@@ -24,6 +24,7 @@ dataset:
   var_increase: 1
   photon_level: 0
   use_bkgd_masking: false
+  watch_movie: false
 
 model:
   name: captured-neus

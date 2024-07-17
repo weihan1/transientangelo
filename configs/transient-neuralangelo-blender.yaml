@@ -21,6 +21,7 @@ dataset:
   test_split: "test"
   test_no: 2
   photon_level: 0 #Options [0, 10, 50, 150, 300, 600], 0 meaning we do not scale down the transients
+  watch_movie: false
 
 model:
   name: transient-neus
