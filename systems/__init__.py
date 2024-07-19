@@ -16,4 +16,4 @@ def make(name, config, load_from_checkpoint=None):
     return system
 
 
-from . import transient_nerf, transient_neus, captured_nerf, captured_neus, baseline_neus, baseline_neus_captured
+from . import transient_nerf, transient_neus, captured_nerf, captured_neus, baseline_neus, baseline_neus_captured, captured_movie

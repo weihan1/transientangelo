@@ -423,8 +423,6 @@ class CapturedNeuSSystem(BaseSystem):
         
         #5. PSNR between transient images vs predicted images
         psnr = self.criterions["psnr"](data_image.cpu(), rgb_image)
-        if np.isnan(psnr).any():
-            print("psnr is nan here")
         
         #7. SSIM between transient images vs predicted images
         ssim = torch.tensor(self.criterions["SSIM"](data_image.detach().cpu().numpy(), rgb_image.detach().cpu().numpy()), dtype=torch.float64)

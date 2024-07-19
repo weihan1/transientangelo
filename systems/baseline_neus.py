@@ -399,8 +399,6 @@ class BaselineNeusSystem(BaseSystem):
         #4. Transient IOU
         iou = torch.tensor(self.criterions["Transient_IOU"](rgb, gt_pixs))
         
-        
-        #NOTE: here gt_pixs is already gamma corrected, so we instead raise it to the power of 2.2 and then multiply by view scale and then divide by dataset scale
         rgb_image = rgb 
         data_image = gt_pixs
         
@@ -532,7 +530,7 @@ class BaselineNeusSystem(BaseSystem):
             self.save_img_sequence(
                 f"it{self.global_step}-test",
                 f"it{self.global_step}-test",
-                '(\d+)\.png',
+                r'.*(\d+)_predicted_RGB\.png',
                 save_format='mp4',
                 fps=10
             )

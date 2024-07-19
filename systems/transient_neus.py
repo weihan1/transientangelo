@@ -365,28 +365,6 @@ class TransientNeuSSystem(BaseSystem):
         self.save_plot_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_transient.png", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), self.global_step)
         self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_weight", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["depth"], self.model.exposure_time, out["distances_from_origin"], out["ray_indices"], out["t_ends"], out["t_starts"], self.global_step)
 
-
-        # PLotting 
-        # self.save_weight_grid(f"it{self.global_step}-{batch['index'][0].item()}-regnerf_patch_weight", point_x, point_y, out["rgb"].view(W,H,self.model.n_bins,3), out["weights"], out["ray_indices"], self.global_step)
-        # #1. Choose three points on the image near the center of the image and plot the image with the dots
-        # quotient = 2
-        # rendering_ind_x = np.array([256]*(W // 2 ))
-        # rendering_ind_y = np.arange(0, W, quotient) #pixel indices from 0 to 512 in increment of 2
-        # plotting_subset_y = np.array([50, 100, 150])
-        # img_plotting_subset_y = plotting_subset_y*2 #([100,200, 300])
-        # exposure_time = self.model.exposure_time
-        
-        
-        # #NOTE: ray_indices is bounded between (0, self.config.model.ray_chunk), therefore, it's non-trivial to determine the indices of the rays
-        # #that correspond to the exact image pixel
-        # ray_indices_count_sorted = torch.argsort(torch.bincount(out["ray_indices"]))
-        # top_3_indices = ray_indices_count_sorted[-3:]
-        
-        # self.save_image_n_dots(f"it{self.global_step}-image_dots", predicted_image.view(H,W,3), rendering_ind_x[plotting_subset_y], img_plotting_subset_y)
-        
-        # self.save_sdf_plots(f"it{self.global_step}-sdf_samples", top_3_indices, out["distances_from_origin"], out["ray_indices"], exposure_time, out["depth"], out["sdf_samples"])
-        
-        
         self.save_image_grid(f"it{self.global_step}-{batch['index'][0].item()}.png", [
             {'type': 'rgb', 'img': integrated_transient.view(H, W, 3), 'kwargs': {'data_format': 'HWC'}},
             {'type': 'grayscale', 'img': (out['depth']*out['opacity']).view(H, W), 'kwargs': {}},
