@@ -82,12 +82,10 @@ class CapturedDatasetMovieBase():
         self.all_c2w = np.zeros((len(meta), 4, 4))
         
         for i,key in enumerate(tqdm(meta, desc=f"Processing {self.split} frames")):
-            try:frame = meta[key]["frames"][0]
-            except:
-                print(key)
-                print('?')
+            frame = meta[key]["frames"][0]
             c2w = torch.from_numpy(np.array(frame['transform_matrix']))
             self.all_c2w[i] = c2w
+
         self.all_c2w = torch.from_numpy(self.all_c2w)
         print("FINSIHED LOADING THESE CONFIGS")
         
