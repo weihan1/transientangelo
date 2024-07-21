@@ -175,7 +175,7 @@ class CapturedMovie(BaseSystem):
             self.save_img_sequence(
                 f"it{self.global_step}-test",
                 f"it{self.global_step}-test",
-                r'.*(\d+)_predicted_RGB\.png',
+                r'(\d+)_predicted_RGB\.png', #assuming the file is called *_predicted_RGB.png, where * is any natural number
                 save_format='mp4',
                 fps=30
             )
