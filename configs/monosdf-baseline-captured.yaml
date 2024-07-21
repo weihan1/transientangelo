@@ -24,7 +24,6 @@ dataset:
   scale_down_photon_factor: 1
   use_mask: true
   use_gt_depth_normal: true
-  watch_movie: false
 
 model:
   name: baseline-neus-captured

@@ -43,10 +43,18 @@ class CapturedMovie(BaseSystem):
         self.register_buffer("train_rep", torch.tensor(1, dtype=torch.long))
 
     def forward(self, batch):
-        return self.model(batch['rays_dict'], batch["laser_kernel"])
+        #NOTE: if using transient-based method, then perform forward pass using laser kernel
+        if "transient" in self.config.name:
+            return self.model(batch['rays_dict'], batch["laser_kernel"])
+        #NOTE: else, normal forward pass 
+        else:
+            return self.model(batch['rays_dict'])
     
     def preprocess_data(self, batch, stage):
         #This populates the batch to feed into forward
+        if stage in ["train", "validation"]:
+            print("THIS IS TO WATCH MOVIE NOT FOR TRAINING")
+            exit(1)
         rays_dict = {}
         if 'index' in batch: # validation / testing
             index = batch['index']
@@ -57,9 +65,6 @@ class CapturedMovie(BaseSystem):
                 index = torch.randint(0, len(self.dataset.all_images), size=(1,), device=self.dataset.all_images.device)
                 
         index = index.cpu()
-        if stage in ["train", "validation"]:
-            print("THIS IS TO WATCH MOVIE NOT FOR TRAINING")
-            exit(1)
             
         x, y = torch.meshgrid(
             torch.arange(self.dataset.w, device=self.dataset.all_c2w.device),

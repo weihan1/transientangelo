@@ -83,6 +83,8 @@ class CapturedDatasetMovieBase():
         
         for i,key in enumerate(tqdm(meta, desc=f"Processing {self.split} frames")):
             frame = meta[key]["frames"][0]
+            number = frame["file_path"].split("/")[-1].split("_")[-1]
+            print(f"Processing number {number}", end='\r')
             c2w = torch.from_numpy(np.array(frame['transform_matrix']))
             self.all_c2w[i] = c2w
 
