@@ -1,6 +1,6 @@
 # Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar 
 
-
+![teaser](images/teaser.png)
 
 ## 🔨 Installation
 
