@@ -311,9 +311,6 @@ class NeuSModel(BaseModel):
         comp_normal = accumulate_along_rays(weights, ray_indices, values=normal, n_rays=n_rays)
         comp_normal = F.normalize(comp_normal, p=2, dim=-1)
 
-        #urbannerf stuff
-        weights_squared = weights ** 2
-        
         out = {
             'comp_rgb': comp_rgb,
             'comp_normal': comp_normal,

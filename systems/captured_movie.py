@@ -154,6 +154,7 @@ class CapturedMovie(BaseSystem):
     def test_step(self, batch, batch_idx):  
         
         W, H = self.dataset.img_wh
+        
         out = self(batch)
         try:
             rgb = out["comp_rgb_full"].reshape(512,512,3).numpy() # (512,512,3) when loading baselines, we get images

@@ -137,7 +137,7 @@ class CapturedMovieModule(pl.LightningDataModule):
         sampler = None
         return DataLoader(
             dataset, 
-            num_workers=1, 
+            num_workers=os.cpu_count(), 
             batch_size=batch_size,
             pin_memory=True,
             sampler=sampler

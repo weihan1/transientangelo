@@ -219,7 +219,6 @@ class SaverMixin():
         writer.close()
     
     
-    
     def save_img_sequence(self, filename, img_dir, matcher, save_format='gif', fps=30):
         assert save_format in ['gif', 'mp4']
         if not filename.endswith(save_format):
