@@ -39,3 +39,8 @@ conda install pytorch-scatter -c pyg
 
 ## 👨‍🍳 Usage 
 
+
+
+
+## 📣 Acknowledgements
+We thank [TransientNeRF](https://github.com/anaghmalik/TransientNeRF) for their implementation of transient volume rendering. We thank [NeRFAcc](https://www.nerfacc.com) and [instant-nsr-pl](https://github.com/bennyguo/instant-nsr-pl) for their implementation of surface-based rendering and efficient ray marching.
