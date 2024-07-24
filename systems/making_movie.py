@@ -18,7 +18,7 @@ from systems.base import BaseSystem
 from systems.criterions import PSNR, binary_cross_entropy, MSELoss, L1_depth, MSE_depth, get_gt_depth, get_depth_from_transient, SSIM, LPIPS, KL_DIV, TransientIOU
 
 
-@systems.register('captured-system-movie')
+@systems.register('movie-system')
 class CapturedMovie(BaseSystem):
     """
     Two ways to print to console:
@@ -43,8 +43,8 @@ class CapturedMovie(BaseSystem):
         self.register_buffer("train_rep", torch.tensor(1, dtype=torch.long))
 
     def forward(self, batch):
-        #NOTE: if using transient-based method, then perform forward pass using laser kernel
-        if "transient" in self.config.name:
+        #NOTE: if using transient-based method on the captured dataset, then perform forward pass using laser kernel
+        if hasattr(self.dataset, "laser_kernel"):
             return self.model(batch['rays_dict'], batch["laser_kernel"])
         #NOTE: else, normal forward pass 
         else:
@@ -81,7 +81,24 @@ class CapturedMovie(BaseSystem):
             
         #Converts pixel coordinates to normalized camera coordinates    
         c2w = self.dataset.all_c2w[index]
-        camera_dirs = self.dataset.K(s_x, s_y)
+        
+        if self.config.dataset.name == "captured_dataset": #Different intinsic param for captured dataset
+            camera_dirs = self.dataset.K(s_x, s_y)
+            
+        else:
+            camera_dirs = F.pad(
+            torch.stack(
+                [
+                    (s_x - self.dataset.K[0, 2] + 0.5) / self.dataset.K[0, 0],
+                    (s_y - self.dataset.K[1, 2] + 0.5)
+                    / self.dataset.K[1, 1]
+                    * (-1.0 if self.dataset.OPENGL_CAMERA else 1.0),
+                ],
+                dim=-1,
+            ),
+            (0, 1),
+            value=(-1.0 if self.dataset.OPENGL_CAMERA else 1.0),
+            )
                 
         rays_d = (camera_dirs[:x.shape[0], None, :] * c2w[:, :3, :3].to(self.rank)).sum(dim=-1) #upper left corner of the c2w
         rays_o = torch.broadcast_to(c2w[:,:3, -1], rays_d.shape).to(self.rank) #Camera origins from the same view are the same 
@@ -105,7 +122,7 @@ class CapturedMovie(BaseSystem):
         
         batch.update({
             'rays_dict': rays_dict,
-            'laser_kernel': self.dataset.laser_kernel,
+            'laser_kernel': self.dataset.laser_kernel if hasattr(self.dataset, "laser_kernel") else None
         })
     
     
@@ -160,12 +177,14 @@ class CapturedMovie(BaseSystem):
             rgb = out["comp_rgb_full"].reshape(512,512,3).numpy() # (512,512,3) when loading baselines, we get images
             depth = out["depth"].reshape(512,512).numpy()
         except:
-            rgb = out["rgb"].reshape(512,512,1500,3).numpy()
+            rgb = out["rgb"].reshape(512,512,self.dataset.n_bins,3).numpy()
             rgb = rgb.sum(axis=-2)*self.dataset.view_scale/self.dataset.dataset_scale
+            rgb = np.clip(rgb, 0, 1) ** (1 / 2.2)
             depth = out["depth"].reshape(512,512).numpy()
         #Preprocess the exr_depth to have a black background
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb*255.0).astype(np.uint8))
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth, cmap='inferno', vmin=0.8, vmax=1.5)
+
         return {
             'index': batch['index']
         }      

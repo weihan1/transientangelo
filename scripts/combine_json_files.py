@@ -29,11 +29,13 @@ def combine_json_files(directory, output_file, sim):
 scenes_cap = ["food_raxel", "cinema_raxel", "chef_raxel", "carving_raxel", "boots_raxel", "baskets_raxel"]
 scenes_sim = ["lego", "benches", "chair", "ficus", "hotdog"]
 
-for scene in scenes_sim:
-    directory = f"/scratch/ondemand28/weihanluo/transientangelo/load/transient_nerf_synthetic/{scene}/{scene}_jsons/movie_jsons/"
 
-    # Output file name
-    output_file = "transforms_movie_combined.json"
+if __name__ == "__main__":
+    for scene in scenes_sim:
+        directory = f"/scratch/ondemand28/weihanluo/transientangelo/load/transient_nerf_synthetic/{scene}/{scene}_jsons/movie_jsons/"
 
-    # Combine the JSON files
-    combine_json_files(directory, output_file, sim=True)
+        # Output file name
+        output_file = "transforms_movie_combined.json"
+
+        # Combine the JSON files
+        combine_json_files(directory, output_file, sim=True)
