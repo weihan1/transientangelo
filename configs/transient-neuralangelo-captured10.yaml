@@ -102,9 +102,9 @@ system:
   loss:
     lambda_rgb_l1: 1. 
     lambda_space_carving: 1.e-2
-    lambda_integrated_l1: 5.e-3
+    lambda_integrated_l1: 2.e-2
     lambda_mask: 0.0 
-    lambda_eikonal: 1.e-6
+    lambda_eikonal: 1.e-5
     lambda_eikonal_patch: 0.0
     lambda_curvature: 0.
     lambda_surface: 0.0

@@ -44,7 +44,7 @@ class CapturedMovie(BaseSystem):
 
     def forward(self, batch):
         #NOTE: if using transient-based method on the captured dataset, then perform forward pass using laser kernel
-        if hasattr(self.dataset, "laser_kernel"):
+        if hasattr(self.dataset, "laser_kernel") and "baseline" not in self.config.name:
             return self.model(batch['rays_dict'], batch["laser_kernel"])
         #NOTE: else, normal forward pass 
         else:
@@ -82,7 +82,7 @@ class CapturedMovie(BaseSystem):
         #Converts pixel coordinates to normalized camera coordinates    
         c2w = self.dataset.all_c2w[index]
         
-        if self.config.dataset.name == "captured_dataset": #Different intinsic param for captured dataset
+        if self.config.dataset.name == "captured-movie": #Different intinsic param for captured dataset
             camera_dirs = self.dataset.K(s_x, s_y)
             
         else:
