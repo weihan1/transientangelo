@@ -68,7 +68,7 @@ The default config settings can be customized:
 
 `config.model.ray_chunk` controls the size of the chunk of rays that is being used for rendering during eval. You can decrease/increase this number to accelerate the validation/testing step. Select divisors of 262144 (since the image size is 512x512). 
 
-`config.system.loss.{lambda_integrated_l1, lambda_space_carving, lambda_eikonal, lambda_regnerf_depth_variance, lambda_sparsity, sparsity_scale}` these are essentially the weights corresponding to $\{\lambda_{\text{ref}}, \lambda_{\text{sc}}, \lambda_{\text{eik}}, \lambda_{\text{weightvar}}, \lambda_{\text{sparse}}\}$. 
+`config.system.loss.{lambda_integrated_l1, lambda_space_carving, lambda_eikonal, lambda_regnerf_depth_variance, lambda_sparsity, sparsity_scale}` these are essentially the weights corresponding to $\{\lambda_{\text{ref}}, \lambda_{\text{sc}}, \lambda_{\text{eik}}, \lambda_{\text{weightvar}}, \lambda_{\text{sparse}}, \alpha \}$. 
 
 `config.trainer.max_steps` and `config.val_check_interval` controls the total number of training steps and the number of steps interval for validation. 
 
