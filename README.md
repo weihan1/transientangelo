@@ -46,7 +46,7 @@ The training command structure will be as follows:
 ```
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --train dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS>
 ```
-Two main configs: transient-neuralangelo-blender.yaml and transient-neuralangelo-captured.yaml are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the `transient-neuralangelo-blender{PHOTON_LEVEL}.yaml` and `transient-neuralangelo-captured{PHOTON_LEVEL}.yaml`. In the current code base, evaluation will follow immediately after training. 
+Two main configs: `transient-neuralangelo-blender.yaml` and `transient-neuralangelo-captured.yaml` are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the `transient-neuralangelo-blender{PHOTON_LEVEL}.yaml` and `transient-neuralangelo-captured{PHOTON_LEVEL}.yaml`. In the current code base, evaluation will follow immediately after training. 
 
 ### Evaluation
 If you decide to run evaluation, you will be using this command structure:
