@@ -64,7 +64,9 @@ To reproduce baseline numbers, run the evaluation script with the corresponding 
 For the 360 degrees videos, you first need a trained model. Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset.
 
 ### Simple config settings
-The default settings can be customized:
+The default config settings can be customized:
+-`config.model.ray_chunk` controls the size of the chunk of rays that is being used for rendering during eval. You can decrease/increase this number to accelerate the validation/testing step. Select divisors of 262144 (since the image size is 512x512).
+
 
 
 
