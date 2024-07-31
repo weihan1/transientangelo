@@ -35,10 +35,28 @@ conda install pytorch-scatter -c pyg
 ## 🖨️ Dataset 
 
 
+## 👨‍🍳 Usage
+### Training
+The training command structure will be as follows:
+```
+python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --train dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS>
+```
+Two main configs: transient-neuralangelo-blender.yaml and transient-neuralangelo-captured.yaml are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the transient-neuralangelo-blender{PHOTON_LEVEL}.yaml and transient-neuralangelo-captured{PHOTON_LEVEL}.yaml. In the current code base, evaluation will follow immediately after training.
+
+### Evaluation:
+If you decide to run evaluation, you will be using this command structure:
+```
+python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --resume <CKPT_PATH> --test dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS>
+```
+The <CKPT_PATH> will be the checkpoint path ending with ckpt.
 
 
-## 👨‍🍳 Usage 
+### Reproducing numbers
+To reproduce baseline numbers, run the evaluation script with the corresponding checkpoint and corresponding config files (e.g. regnerf-baseline-blender.yaml for RegNeRF on the simulated dataset, etc.)
 
+
+### Making 360 degrees videos
+For the 360 degrees videos, you first need a trained model. Then, simply use the evaluation command structure (with the corresponding config path) and append dataset.name=captured-movie system.name=movie-system for the captured dataset and dataset.name=blender-movie system.name=movie-system for the simulated dataset.
 
 ## 🎓 Citation
 ```
@@ -49,6 +67,14 @@ conda install pytorch-scatter -c pyg
   year = {2024}
 }
 ```
+
+## 🔧 General troubleshooting advice
+| Problem                                     | Solution                                                                                                       |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| Program freezes during ray marching.        | Delete the cache located at `~/.cache/torch_extensions/` (see [issue #260](https://github.com/nerfstudio-project/nerfacc/issues/260)) |
+| RuntimeError: CUDA error: invalid configuration argument       | This error seems to be present in pytorch versions 1.12.1+cuda11.6, please switch to pytorch 1.13.0   (see [issue #207] (https://github.com/nerfstudio-project/nerfacc/issues/207))  |
+
+
 
 ## 📣 Acknowledgements
 We thank [TransientNeRF](https://github.com/anaghmalik/TransientNeRF) for their implementation of transient volume rendering. We thank [NerfAcc](https://www.nerfacc.com) and [instant-nsr-pl](https://github.com/bennyguo/instant-nsr-pl) for their implementation efficient ray marching and surface-based rendering.
