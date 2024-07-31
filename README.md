@@ -40,7 +40,15 @@ conda install pytorch-scatter -c pyg
 ## 👨‍🍳 Usage 
 
 
-
+## 🎓 Citation
+```
+@inproceedings{luo2024transientangelo,
+  title = {Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar}, 
+  author = {Luo, Weihan and Malik, Anagh and Lindell, David B.},
+  journal = {arXiv},
+  year = {2024}
+}
+```
 
 ## 📣 Acknowledgements
 We thank [TransientNeRF](https://github.com/anaghmalik/TransientNeRF) for their implementation of transient volume rendering. We thank [NerfAcc](https://www.nerfacc.com) and [instant-nsr-pl](https://github.com/bennyguo/instant-nsr-pl) for their implementation efficient ray marching and surface-based rendering.

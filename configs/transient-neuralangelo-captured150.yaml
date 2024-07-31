@@ -1,5 +1,6 @@
 name: transient-neuralangelo-captured-${dataset.scene}
 tag: "${dataset.scene}-${dataset.num_views}-views-${dataset.photon_level}"
+exp_dir: "vector_jobs_captured_${dataset.photon_level}/${dataset.scene}/${dataset.num_views}_views"
 seed: 42
 
 dataset:
@@ -102,9 +103,9 @@ system:
   loss:
     lambda_rgb_l1: 1. 
     lambda_space_carving: 1.e-2
-    lambda_integrated_l1: 3.e-3
+    lambda_integrated_l1: 7.e-3
     lambda_mask: 0.0 
-    lambda_eikonal: 1.e-6
+    lambda_eikonal: 1.e-5
     lambda_eikonal_patch: 0.0
     lambda_curvature: 0.
     lambda_surface: 0.0
