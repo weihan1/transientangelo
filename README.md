@@ -72,7 +72,8 @@ For the 360 degrees videos, you first need a trained model. Then, simply use the
 | Problem                                     | Solution                                                                                                       |
 |---------------------------------------------|---------------------------------------------------------------------------------------------------------------|
 | Program freezes during ray marching.        | Delete the cache located at `~/.cache/torch_extensions/` (see [issue #260](https://github.com/nerfstudio-project/nerfacc/issues/260)) |
-| RuntimeError: CUDA error: invalid configuration argument       | This error seems to be present in pytorch versions 1.12.1+cuda11.6, please switch to pytorch 1.13.0   (see [issue #207] (https://github.com/nerfstudio-project/nerfacc/issues/207))  |
+| RuntimeError: CUDA error: invalid configuration argument       | This error seems to be present in pytorch versions 1.12.1+cuda11.6, please switch to pytorch 1.13.0 (see [issue #207](https://github.com/nerfstudio-project/nerfacc/issues/207))  |
+
 
 
 
