@@ -36,14 +36,19 @@ conda install pytorch-scatter -c pyg
 
 
 ## 👨‍🍳 Usage
+
+### Memory Usage 
+All experiments are ran on a single RTXA6000 GPU with 48GB of memory. There are a couple ways to reduce the memory usage to fit on smaller GPUs. For instance, you can reduce the size of the model (i.e. reducing `model.geometry.xyz_encoding_config.log2_hashmap_size`). Furthermore, you can also skip evaluation by setting `trainer.val_check_interval` to a value larger than `trainer.max_steps`. 
+
+
 ### Training
 The training command structure will be as follows:
 ```
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --train dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS>
 ```
-Two main configs: transient-neuralangelo-blender.yaml and transient-neuralangelo-captured.yaml are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the transient-neuralangelo-blender{PHOTON_LEVEL}.yaml and transient-neuralangelo-captured{PHOTON_LEVEL}.yaml. In the current code base, evaluation will follow immediately after training.
+Two main configs: transient-neuralangelo-blender.yaml and transient-neuralangelo-captured.yaml are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the `transient-neuralangelo-blender{PHOTON_LEVEL}.yaml` and `transient-neuralangelo-captured{PHOTON_LEVEL}.yaml`. In the current code base, evaluation will follow immediately after training. 
 
-### Evaluation:
+### Evaluation
 If you decide to run evaluation, you will be using this command structure:
 ```
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --resume <CKPT_PATH> --test dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS>
@@ -52,11 +57,17 @@ The <CKPT_PATH> will be the checkpoint path ending with ckpt.
 
 
 ### Reproducing numbers
-To reproduce baseline numbers, run the evaluation script with the corresponding checkpoint and corresponding config files (e.g. regnerf-baseline-blender.yaml for RegNeRF on the simulated dataset, etc.)
+To reproduce baseline numbers, run the evaluation script with the corresponding checkpoint and corresponding config files (e.g. `regnerf-baseline-blender.yaml` for RegNeRF on the simulated dataset, etc.)
 
 
 ### Making 360 degrees videos
-For the 360 degrees videos, you first need a trained model. Then, simply use the evaluation command structure (with the corresponding config path) and append dataset.name=captured-movie system.name=movie-system for the captured dataset and dataset.name=blender-movie system.name=movie-system for the simulated dataset.
+For the 360 degrees videos, you first need a trained model. Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset.
+
+### Simple config settings
+The default settings can be customized:
+
+
+
 
 ## 🎓 Citation
 ```

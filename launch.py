@@ -55,6 +55,7 @@ def main():
     config = load_config(args.config, cli_args=extras)
     config.cmd_args = vars(args)
 
+    #you can adjust stuff here to get the exp names that u want
     config.trial_name = config.get('trial_name') or (config.tag + datetime.now().strftime('@%Y%m%d-%H%M%S'))
     config.exp_dir = config.get('exp_dir') or os.path.join(args.exp_dir, config.name)
     config.save_dir = config.get('save_dir') or os.path.join(config.exp_dir, config.trial_name, 'save')
@@ -72,8 +73,6 @@ def main():
         config.seed = int(time.time() * 1000) % 1000
     pl.seed_everything(config.seed)
 
-    
-    print("🚀🚀🚀 WACV 2025 🚀🚀🚀".center(24, "-"))
     
     print(f"Experiment: {config.tag} 🧪")
     
