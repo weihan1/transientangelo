@@ -34,6 +34,7 @@ conda install pytorch-scatter -c pyg
 5. Install
 ## 🖨️ Dataset 
 The normal datasets can be downloaded here: [Dropbox](https://www.dropbox.com/scl/fo/02hsk2e686mkjwziyofzt/AN9Op5vDidmS6roxN3Ho5mE?dl=0&rlkey=op6qgnbrde2jcjzp2g2hw803a)
+The tree structure should look something like the following:
 ```bash
 .
 ├── captured_data
