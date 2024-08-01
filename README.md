@@ -33,12 +33,29 @@ conda install pytorch-scatter -c pyg
 
 5. Install
 ## 🖨️ Dataset 
-
+The normal datasets can be downloaded here: [Dropbox](https://www.dropbox.com/scl/fo/02hsk2e686mkjwziyofzt/AN9Op5vDidmS6roxN3Ho5mE?dl=0&rlkey=op6qgnbrde2jcjzp2g2hw803a)
+```bash
+.
+├── captured_data
+│   ├── baskets_raxel
+│   ├── boots_raxel
+│   ├── carving_raxel
+│   ├── chef_raxel
+│   ├── cinema_raxel
+│   ├── food_raxel
+│   └── pulse_low_flux.mat
+├── transient_nerf_synthetic
+│   ├── benches
+│   ├── chair
+│   ├── ficus
+│   ├── hotdog
+│   └── lego
+```
 
 ## 👨‍🍳 Usage
 
 ### Memory Usage 
-All experiments are ran on a single RTXA6000 GPU with 48GB of memory. There are a couple ways to reduce the memory usage to fit on smaller GPUs. For instance, you can reduce the size of the model (i.e. reducing `model.geometry.xyz_encoding_config.log2_hashmap_size`). Furthermore, you can also skip evaluation by setting `trainer.val_check_interval` to a value larger than `trainer.max_steps`. 
+All experiments are ran on a single RTXA6000 GPU with 48GB of memory. There are a couple ways to reduce the memory usage to fit on smaller GPUs. For instance, you can reduce the size of the model (i.e. reducing `model.geometry.xyz_encoding_config.log2_hashmap_size`). Furthermore, you can also skip evaluation by setting `trainer.val_check_interval` to a value larger than `trainer.max_steps`.
 
 
 ### Training
@@ -47,6 +64,8 @@ The training command structure will be as follows:
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --train dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS>
 ```
 Two main configs: `transient-neuralangelo-blender.yaml` and `transient-neuralangelo-captured.yaml` are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the `transient-neuralangelo-blender{PHOTON_LEVEL}.yaml` and `transient-neuralangelo-captured{PHOTON_LEVEL}.yaml`. In the current code base, evaluation will follow immediately after training. 
+
+For multi-gpu traininig, you can specify multiple gpu ids.
 
 ### Evaluation
 If you decide to run evaluation, you will be using this command structure:
