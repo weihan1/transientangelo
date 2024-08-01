@@ -23,7 +23,7 @@ dataset:
   test_no: 2
   var_increase: 1
   photon_level: 10
-  use_bkgd_masking: false
+  use_bkgd_masking: true
 
 model:
   name: captured-neus
