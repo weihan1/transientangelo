@@ -9,7 +9,7 @@
 conda create -n env_name python=3.8.13
 conda activate env_name
 ```
-2. Additionally please install PyTorch from (https://pytorch.org/get-started/previous-versions/). We tested on pytorch1.13.0 with cuda11.6. Be aware of some issues between NerfAcc and other Pytorch versions here: https://github.com/nerfstudio-project/nerfacc/issues/207
+2. Additionally please install PyTorch>=1.10 from (https://pytorch.org/get-started/previous-versions/). We tested on pytorch1.13.0 with cuda11.6. Be aware of some issues between NerfAcc and other Pytorch versions here: https://github.com/nerfstudio-project/nerfacc/issues/207
 
 3. Install the requirements file with 
 
