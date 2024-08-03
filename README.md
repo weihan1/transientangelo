@@ -38,7 +38,7 @@ load
 │   ├── hotdog
 │   └── lego
 ```
-Side note: when you are running the training script for the captured dataset, you will need the camera intrinsics called `intrinsics.npy`, which are located in the Dropbox. In the config, you need to set `config.datatset.intrinsics` to the path where you install the intrinsics.
+Side note: when you are running the training script for the captured dataset, you will need the camera intrinsics called `intrinsics.npy`, which are located in the Dropbox. In the config, you need to set `config.datatset.intrinsics` to the path where you install the intrinsics. The intrinsics are the same for each captured scene.
 
 ## 👨‍🍳 Usage
 
@@ -53,7 +53,7 @@ python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --train dataset.scene=<SC
 ```
 Two main configs: `transient-neuralangelo-blender.yaml` and `transient-neuralangelo-captured.yaml` are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the `transient-neuralangelo-blender{PHOTON_LEVEL}.yaml` and `transient-neuralangelo-captured{PHOTON_LEVEL}.yaml`. In the current code base, evaluation will follow immediately after training. 
 
-For multi-gpu traininig, you can specify multiple gpu ids.
+For multi-gpu training, you can specify multiple gpu ids.
 
 ### Evaluation
 If you decide to run evaluation, you will be using this command structure:
@@ -61,14 +61,14 @@ If you decide to run evaluation, you will be using this command structure:
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --resume <CKPT_PATH> --test dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS>
 ```
 The <CKPT_PATH> will be the checkpoint path ending with ckpt.
-
+NOTE: The config that you are loading for eval has to be the same config that you train with.
 
 ### Reproducing numbers
 To reproduce baseline numbers, run the evaluation script with the corresponding checkpoint and corresponding config files (e.g. `regnerf-baseline-blender.yaml` for RegNeRF on the simulated dataset, etc.)
 
 
 ### Making 360 degrees videos
-For the 360 degrees videos, you first need a trained model. Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset. Looks like this:
+For the 360 degrees videos, you need a trained model and 360 degrees poses. Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset. Looks like this:
 ```
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --resume <CKPT_PATH> --test dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS> dataset.name=blender-movie system.name=movie-system
 ```
