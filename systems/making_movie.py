@@ -173,6 +173,7 @@ class CapturedMovie(BaseSystem):
         W, H = self.dataset.img_wh
         
         out = self(batch)
+            
         try:
             rgb = out["comp_rgb_full"].reshape(512,512,3).numpy() # (512,512,3) when loading baselines, we get images
             depth = out["depth"].reshape(512,512).numpy()
@@ -181,7 +182,7 @@ class CapturedMovie(BaseSystem):
             rgb = rgb.sum(axis=-2)*self.dataset.view_scale/self.dataset.dataset_scale
             rgb = np.clip(rgb, 0, 1) ** (1 / 2.2)
             depth = out["depth"].reshape(512,512).numpy()
-        #Preprocess the exr_depth to have a black background
+        
         imageio.imwrite(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_predicted_RGB.png"), (rgb*255.0).astype(np.uint8))
         plt.imsave(self.get_save_path(f"it{self.global_step}-test/{batch['index'][0].item()}_depth_viz.png"), depth, cmap='inferno', vmin=0.8, vmax=1.5)
 
