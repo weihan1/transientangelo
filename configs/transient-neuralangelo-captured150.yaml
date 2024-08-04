@@ -1,6 +1,5 @@
 name: transient-neuralangelo-captured-${dataset.scene}
 tag: "${dataset.scene}-${dataset.num_views}-views-${dataset.photon_level}"
-exp_dir: "vector_jobs_captured_${dataset.photon_level}/${dataset.scene}/${dataset.num_views}_views"
 seed: 42
 
 dataset:
