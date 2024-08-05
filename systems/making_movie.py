@@ -82,7 +82,7 @@ class CapturedMovie(BaseSystem):
         #Converts pixel coordinates to normalized camera coordinates    
         c2w = self.dataset.all_c2w[index]
         
-        if self.config.dataset.name == "captured-movie": #Different intinsic param for captured dataset
+        if hasattr(self.dataset, "laser_kernel"): #Different intinsic param for captured transient
             camera_dirs = self.dataset.K(s_x, s_y)
             
         else:
@@ -198,7 +198,8 @@ class CapturedMovie(BaseSystem):
                 f"it{self.global_step}-test",
                 r'(\d+)_predicted_RGB\.png', #assuming the file is called *_predicted_RGB.png, where * is any natural number
                 save_format='mp4',
-                fps=30
+                fps=30,
+                reversed = True if "captured" in self.config.dataset else False #reverse the video if using the captured movie pose
             )
         print("ENJOY THE MOVIE")
             

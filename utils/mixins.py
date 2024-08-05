@@ -219,7 +219,7 @@ class SaverMixin():
         writer.close()
     
     
-    def save_img_sequence(self, filename, img_dir, matcher, save_format='gif', fps=30):
+    def save_img_sequence(self, filename, img_dir, matcher, save_format='gif', fps=30, reversed=False):
         assert save_format in ['gif', 'mp4']
         if not filename.endswith(save_format):
             filename += f".{save_format}"
@@ -230,6 +230,8 @@ class SaverMixin():
             if matcher.search(f):
                 imgs.append(f)
         imgs = sorted(imgs, key=lambda f: int(matcher.search(f).groups()[0]))
+        if reversed:
+            imgs = imgs[::-1]
         imgs = [cv2.imread(os.path.join(img_dir, f)) for f in imgs]
         
         if save_format == 'gif':
