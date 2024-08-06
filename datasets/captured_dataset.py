@@ -147,7 +147,8 @@ class CapturedDatasetBase():
                         if self.config.use_bkgd_masking:
                             mask_path = os.path.join(self.config.root_dir, f"train_{number:03d}_mask.png")  
                             mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-                            rgba = rgba * mask[...,None,None]
+                            assert mask.max() == 255
+                            rgba *= (mask[...,None,None]/255)
                             print("using masked transients")
                         self.all_images[i] = rgba #(h,w,1500,3)
                 else: #Low photon experiments
