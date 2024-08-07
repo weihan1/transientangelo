@@ -68,7 +68,7 @@ To reproduce baseline numbers, you can either run training with the correspondin
 
 
 ### Making 360 degrees videos
-For the 360 degrees videos, you need a trained model and 360 degrees poses. Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset. Looks like this:
+For the 360 degrees videos, you need a trained model and 360 degrees poses (I can send through email). Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset. Looks like this:
 ```
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --resume <CKPT_PATH> --test dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS> dataset.name=blender-movie system.name=movie-system
 ```
