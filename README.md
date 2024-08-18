@@ -1,5 +1,11 @@
-# Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar 
+<h1>Transientangelo:<br>Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar</h1>
 
+<div>
+Weihan Luo&emsp; Anagh Malik&emsp; David Lindell;
+</div>
+<div>
+    University of Toronto&emsp;
+</div>
 ![teaser](images/teaser.png)
 
 ## 🔨 Installation
