@@ -23,5 +23,6 @@ pyransac3d
 torch_efficient_distloss
 prettytable
 trimesh
+torch-scatter
 git+https://github.com/facebookresearch/pytorch3d.git@stable
 git+https://github.com/otaheri/chamfer_distance
