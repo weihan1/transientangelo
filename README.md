@@ -8,8 +8,8 @@ Authors:
 [Anagh Malik](https://anaghmalik.com),
 [David B. Lindell](https://davidlindell.com)
 
-[![Website](images/badge-website.svg)](https://marigoldmonodepth.github.io)
-[![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)](https://arxiv.org/abs/2312.02145)
+[![Website](images/badge-website.svg)]()
+[![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)]()
 
 ## 🔨 Installation
 
