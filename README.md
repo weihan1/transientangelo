@@ -1,14 +1,12 @@
-<div style="text-align: center;">
-<h1>Transientangelo:<br>Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar</h1>
+# Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar
+This repository represents the official implementation of the paper "Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar"
 
-<div>
-    Weihan Luo&emsp; Anagh Malik&emsp; David Lindell;
-</div>
-<div>
-    University of Toronto&emsp;
-</div>
-<img src="images/teaser.png" alt="teaser" />
-</div>
+![teaser](/images/teaser.png)
+
+
+[Weihan Luo](https://weihan1.github.io)
+[Anagh Malik](https://anaghmalik.com)
+[David B. Lindell](https://davidlindell.com)
 
 ## 🔨 Installation
 
