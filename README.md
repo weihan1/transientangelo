@@ -3,10 +3,13 @@ This repository represents the official implementation of the paper "Transientan
 
 ![teaser](/images/teaser.png)
 
-
-[Weihan Luo](https://weihan1.github.io)
-[Anagh Malik](https://anaghmalik.com)
+Authors:
+[Weihan Luo](https://weihan1.github.io),
+[Anagh Malik](https://anaghmalik.com),
 [David B. Lindell](https://davidlindell.com)
+
+[![Website](images/badge-website.svg)](https://marigoldmonodepth.github.io)
+[![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)](https://arxiv.org/abs/2312.02145)
 
 ## 🔨 Installation
 
