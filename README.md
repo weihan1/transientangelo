@@ -1,12 +1,14 @@
+<div style="text-align: center;">
 <h1>Transientangelo:<br>Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar</h1>
 
 <div>
-Weihan Luo&emsp; Anagh Malik&emsp; David Lindell;
+    Weihan Luo&emsp; Anagh Malik&emsp; David Lindell;
 </div>
 <div>
     University of Toronto&emsp;
 </div>
-![teaser](images/teaser.png)
+<img src="images/teaser.png" alt="teaser" />
+</div>
 
 ## 🔨 Installation
 
