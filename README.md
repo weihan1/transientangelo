@@ -1,5 +1,5 @@
 # Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar
-This repository represents the official implementation of the paper "Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar"
+This repository represents the official implementation of the paper "Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar", arXiv 2024
 
 ![teaser](/images/teaser.png)
 
