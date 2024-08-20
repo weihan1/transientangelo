@@ -55,20 +55,20 @@ class CapturedDatasetBase():
         self.params = np.load(self.config.intrinsics, allow_pickle=True)[()]
         self.shift = self.params['shift'].numpy()
         self.rays = self.params['rays']
-        transient_scale_dict = {'cinema_raxel': {"two": 483.755615234375, "three": 483.755615234375, "five": 491.021728515625}, 'carving_raxel': {"two": 299.24365234375, "three": 299.24365234375, "five": 323.334228515625}, 'boots_raxel': {"two": 273.02276611328125, "three": 273.02276611328125, "five": 277.6478271484375}, 'food_raxel': {"two": 553.1838989257812, "three": 553.1838989257812, "five": 561.6094970703125}, 'chef_raxel': {"two": 493.50701904296875, "three": 493.50701904296875, "five": 548.0447998046875}, 'baskets_raxel': {"two": 308.7045593261719, "three": 319.92572021484375, "five": 326.42620849609375}}
+        transient_scale_dict = {'cinema': {"two": 483.755615234375, "three": 483.755615234375, "five": 491.021728515625}, 'carving': {"two": 299.24365234375, "three": 299.24365234375, "five": 323.334228515625}, 'boots': {"two": 273.02276611328125, "three": 273.02276611328125, "five": 277.6478271484375}, 'food': {"two": 553.1838989257812, "three": 553.1838989257812, "five": 561.6094970703125}, 'chef': {"two": 493.50701904296875, "three": 493.50701904296875, "five": 548.0447998046875}, 'baskets': {"two": 308.7045593261719, "three": 319.92572021484375, "five": 326.42620849609375}}
         self.transient_scale = transient_scale_dict[self.scene][self.n_views]
         self.rep_number = 30
-        self.div_vals = {'boots_raxel': 4470.0,
-                        'baskets_raxel': 6624.0,
-                        'carving_raxel': 4975.0,
-                        'chef_raxel': 9993.0,
-                        'cinema_raxel': 8478.0,
-                        'food_raxel': 16857.0}
+        self.div_vals = {'boots': 4470.0,
+                        'baskets': 6624.0,
+                        'carving': 4975.0,
+                        'chef': 9993.0,
+                        'cinema': 8478.0,
+                        'food': 16857.0}
         
         var_increase = self.config.var_increase
         
         
-        laser_pulse_dic = sio.loadmat('./load/captured_data/pulse_low_flux.mat')['out'].squeeze()
+        laser_pulse_dic = sio.loadmat('./load/captured/pulse_low_flux.mat')['out'].squeeze()
         laser_pulse = laser_pulse_dic
         laser_pulse = (laser_pulse[::2] + laser_pulse[1::2])/2
         lidx = np.argmax(laser_pulse)
