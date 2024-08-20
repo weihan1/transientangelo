@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 ## 🖨️ Dataset 
 The datasets can be downloaded here: [Dropbox](https://www.dropbox.com/scl/fo/02hsk2e686mkjwziyofzt/AN9Op5vDidmS6roxN3Ho5mE?dl=0&rlkey=op6qgnbrde2jcjzp2g2hw803a)
-The tree structure should look something like the following:
+The datasets tree structure should look something like the following:
 ```bash
 load
 ├── captured_data
@@ -46,6 +46,21 @@ load
 │   ├── ficus
 │   ├── hotdog
 │   └── lego
+
+low_photon_transients
+├── captured
+│   ├── baskets
+│   ├── boots
+│   ├── carving
+│   ├── chef
+│   ├── cinema
+│   └── food
+└── simulated
+    ├── benches
+    ├── chair
+    ├── ficus
+    ├── hotdog
+    └── lego
 ```
 Side note: when you are running the training script for the captured dataset, you will need the camera intrinsics called `intrinsics.npy`, which are located in the Dropbox. In the config, you need to set `config.datatset.intrinsics` to the path where you install the intrinsics. The intrinsics are the same for each captured scene.
 
