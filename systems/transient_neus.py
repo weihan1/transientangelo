@@ -451,7 +451,7 @@ class TransientNeuSSystem(BaseSystem):
         
         #Performing low photon scaling. 
         if self.config.dataset.photon_level!=0: #NOTE: when doing eval for low photon exp, make sure to use the low photon config, otherwise scaling will be off
-            low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/simulated/{self.dataset.scene}/clean_transients"
+            low_photon_dir = f"./low_photon_transients/simulated/{self.dataset.scene}/low_photon_transients"
             train_max_path = f"{low_photon_dir}/max_{self.dataset.num_views}_{self.dataset.scene}_{self.config.dataset.photon_level}.txt"
             low_photon_scale_factor_path = f"{low_photon_dir}/scale_factor_{self.dataset.scene}_{self.config.dataset.photon_level}.txt"
             train_max = np.loadtxt(train_max_path)
