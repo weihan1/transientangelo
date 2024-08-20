@@ -8,7 +8,7 @@ Authors:
 [Anagh Malik](https://anaghmalik.com),
 [David B. Lindell](https://davidlindell.com)
 
-[![Website](images/badge-website.svg)]()
+[![Website](images/badge-website.svg)](https://weihan1.github.io/transientangelo/)
 [![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)]()
 
 ## 🔨 Installation
