@@ -154,7 +154,7 @@ class CapturedDatasetBase():
                 else: #Low photon experiments
                     print("Starting the low photon experiments with scale equal to ", self.config.photon_level, "🔦")
                     photon_level = self.config.photon_level
-                    photon_dir = "/scratch/ondemand28/weihanluo/transientangelo/clean_transients/captured"
+                    photon_dir = "./low_photon_transients/captured"
                     for i, frame in enumerate(tqdm(meta['frames'], desc=f"Processing {self.split} frames")):
                         number = int(frame["file_path"].split("_")[-1])
                         actual_scene = self.scene.split("_")[0]
