@@ -401,7 +401,7 @@ class CapturedNeuSSystem(BaseSystem):
         
         if self.config.dataset.photon_level!=0:
             scene = self.dataset.scene.split("_")[0]
-            low_photon_dir = f"/scratch/ondemand28/weihanluo/transientangelo/clean_transients/captured/{scene}/{self.config.dataset.photon_level}"
+            low_photon_dir = f"./low_photon_transients/captured/{scene}/{self.config.dataset.photon_level}"
             train_max_path = f"{low_photon_dir}/{self.dataset.n_views}_views_max.npy"
             low_photon_scale_factor_path = f"{low_photon_dir}/scale_factor_{scene}_{self.config.dataset.photon_level}.npy"
             train_max = np.load(train_max_path)
