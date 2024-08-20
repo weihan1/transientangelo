@@ -198,7 +198,7 @@ checkpoint:
 export:
   chunk_size: 2097152
   export_vertex_color: True
-  ref_mesh_path: /scratch/ondemand28/weihanluo/transientangelo/load/transient_nerf_synthetic/${dataset.scene}/${dataset.scene}.obj
+  ref_mesh_path: ./load/transient_nerf_synthetic/${dataset.scene}/${dataset.scene}.obj
   num_samples: 2500000
 
 trainer:
