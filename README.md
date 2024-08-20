@@ -75,7 +75,7 @@ The training command structure will be as follows:
 ```
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --train dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS>
 ```
-Two main configs: `transient-neuralangelo-blender.yaml` and `transient-neuralangelo-captured.yaml` are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the `transient-neuralangelo-blender{PHOTON_LEVEL}.yaml` and `transient-neuralangelo-captured{PHOTON_LEVEL}.yaml`. In the current code base, evaluation will follow immediately after training. 
+Two main configs: `transient-neuralangelo-blender.yaml` and `transient-neuralangelo-captured.yaml` are our configs for the simulated and captured dataset, respectively. On the low photon experiments, please use the `transient-neuralangelo-blender{PHOTON_LEVEL}.yaml` and `transient-neuralangelo-captured{PHOTON_LEVEL}.yaml`. In the current code base, evaluation will follow immediately after training (or by pressing CTRL+C). 
 
 For multi-gpu training, you can specify multiple gpu ids.
 
@@ -88,7 +88,7 @@ The <CKPT_PATH> will be the checkpoint path ending with ckpt.
 NOTE: The config that you are loading for eval has to be the same config that you train with.
 
 ### Reproducing numbers
-To reproduce baseline numbers, you can either run training with the corresponding config, or you can also run the evaluation script with the corresponding checkpoint (please let me know and I can send through email) and corresponding config files (e.g. `regnerf-baseline-blender.yaml` for RegNeRF on the simulated dataset, etc.)
+To reproduce the numbers in the paper, you can either run training with the corresponding config, or you can also run the evaluation script with the corresponding checkpoint (please let me know and I can send through email) and corresponding config files (e.g. `regnerf-baseline-blender.yaml` for RegNeRF on the simulated dataset, etc.)
 
 
 ### Making 360 degrees videos
