@@ -31,21 +31,23 @@ The datasets can be downloaded here: [Dropbox](https://www.dropbox.com/scl/fo/02
 The datasets tree structure should look something like the following:
 ```bash
 load
-├── captured_data
-│   ├── baskets_raxel
-│   ├── boots_raxel
-│   ├── carving_raxel
-│   ├── chef_raxel
-│   ├── cinema_raxel
-│   ├── food_raxel
-│   ├── pulse_low_flux.mat
-│   └── intrinsics.npy
-├── transient_nerf_synthetic
-│   ├── benches
-│   ├── chair
-│   ├── ficus
-│   ├── hotdog
-│   └── lego
+├── captured
+│   ├── baskets
+│   ├── boots
+│   ├── carving
+│   ├── chef
+│   ├── cinema
+│   ├── food
+│   ├── get_max.py
+│   └── pulse_low_flux.mat
+└── simulated
+    ├── benches
+    ├── chair
+    ├── ficus
+    ├── final_jsons
+    ├── final_jsons_new
+    ├── hotdog
+    └── lego
 
 low_photon_transients
 ├── captured
