@@ -5,7 +5,7 @@ seed: 42
 dataset:
   name: transient_blender
   scene: ???
-  root_dir: ./load/transient_nerf_synthetic/${dataset.scene}
+  root_dir: ./load/simulated/${dataset.scene}
   num_views: two
   gamma: false
   rfilter_sigma: 0.15
@@ -198,7 +198,7 @@ checkpoint:
 export:
   chunk_size: 2097152
   export_vertex_color: True
-  ref_mesh_path: /scratch/ondemand28/weihanluo/transientangelo/load/transient_nerf_synthetic/${dataset.scene}/${dataset.scene}.obj
+  ref_mesh_path: ./load/simulated/${dataset.scene}/${dataset.scene}.obj
   num_samples: 2500000
 
 trainer:
