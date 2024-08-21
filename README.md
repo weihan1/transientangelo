@@ -29,6 +29,12 @@ conda activate env_name
 ```
 pip install -r requirements.txt
 ```
+4. Clone the repository
+```
+git clone https://github.com/weihan1/transientangelo.git
+cd transientangelo/
+```
+
 
 ## 🖨️ Dataset 
 The dataset is located on Huggingface at https://huggingface.co/datasets/weihan1/transientangelo_dataset/tree/main
@@ -37,8 +43,10 @@ To download, use the following command:
 ```
 git clone https://huggingface.co/datasets/weihan1/transientangelo_dataset
 ```
+**load** is name of the dataset for the normal experiments and **low_photon_transients** is the name of the dataset for the low photon experiments. After you clone the dataset you'll need to move them out of transientangelo_dataset/ and into transientangelo/
 
-The datasets tree structure looks like this:
+
+The datasets tree structure looks like this inside transientangelo:
 ```bash
 load
 ├── captured
@@ -73,6 +81,9 @@ low_photon_transients
     ├── ficus
     ├── hotdog
     └── lego
+models
+...
+systems
 ```
 
 
