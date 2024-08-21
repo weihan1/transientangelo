@@ -15,7 +15,6 @@ Authors:
 2024-08-21: Official code release.
 
 
-
 ## 🔨 Installation
 
 1. Create a new conda environment (make sure miniconda3 is installed beforehand). We tested on python version 3.8.13
@@ -32,7 +31,12 @@ pip install -r requirements.txt
 ```
 
 ## 🖨️ Dataset 
-The datasets can be downloaded here: [Dropbox](https://www.dropbox.com/scl/fo/02hsk2e686mkjwziyofzt/AN9Op5vDidmS6roxN3Ho5mE?dl=0&rlkey=op6qgnbrde2jcjzp2g2hw803a)
+The dataset is located on Huggingface at https://huggingface.co/datasets/weihan1/transientangelo_dataset/tree/main
+
+To download, use the following command:
+```
+git clone https://huggingface.co/datasets/weihan1/transientangelo_dataset
+```
 
 The datasets tree structure looks like this:
 ```bash
@@ -70,7 +74,7 @@ low_photon_transients
     ├── hotdog
     └── lego
 ```
-Side note: when you are running the training script for the captured dataset, you will need the camera intrinsics called `intrinsics.npy`, which are located in the Dropbox. In the config, you need to set `config.datatset.intrinsics` to the path where you install the intrinsics. The intrinsics are the same for each captured scene.
+
 
 ## 👨‍🍳 Usage
 
