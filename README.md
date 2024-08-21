@@ -11,6 +11,11 @@ Authors:
 [![Website](images/badge-website.svg)](https://weihan1.github.io/transientangelo/)
 [![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)]()
 
+## 📰 News
+2024-08-21: Official code release.
+
+
+
 ## 🔨 Installation
 
 1. Create a new conda environment (make sure miniconda3 is installed beforehand). We tested on python version 3.8.13
