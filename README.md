@@ -110,6 +110,8 @@ python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --resume <CKPT_PATH> --te
 The <CKPT_PATH> will be the checkpoint path ending with ckpt.
 NOTE: The config that you are loading for eval has to be the same config that you train with.
 
+Instead of evaluating performance, you can also resume training from checkpoint by simply replacing --test to --train.
+
 ### Reproducing numbers
 To reproduce the numbers in the paper, you can either run training with the corresponding config, or you can also run the evaluation script with the corresponding checkpoint (please let me know and I can send through email) and corresponding config files (e.g. `regnerf-baseline-blender.yaml` for RegNeRF on the simulated dataset, etc.)
 
