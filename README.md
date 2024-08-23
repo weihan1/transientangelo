@@ -9,7 +9,7 @@ Authors:
 [David B. Lindell](https://davidlindell.com)
 
 [![Website](images/badge-website.svg)](https://weihan1.github.io/transientangelo/)
-[![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)]()
+[![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)](https://arxiv.org/abs/2408.12191)
 
 ## 📰 News
 2024-08-21: Official code release.
