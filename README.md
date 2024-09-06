@@ -12,7 +12,8 @@ Authors:
 [![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)](https://arxiv.org/abs/2408.12191)
 
 ## 📰 News
-2024-09-06: Uploaded model checkpoints for reproducibility (see Usage section).
+2024-09-06: Uploaded model checkpoints for reproducibility (see Usage section). 
+
 2024-08-21: Official code release.
 
 
