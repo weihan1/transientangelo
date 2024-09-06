@@ -12,6 +12,7 @@ Authors:
 [![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)](https://arxiv.org/abs/2408.12191)
 
 ## 📰 News
+2024-09-06: Uploaded model checkpoints for reproducibility (see Usage section).
 2024-08-21: Official code release.
 
 
@@ -115,8 +116,11 @@ NOTE: The config that you are loading for eval has to be the same config that yo
 Instead of evaluating performance, you can also resume training from checkpoint by simply replacing --test to --train.
 
 ### Reproducing numbers
-To reproduce the numbers in the paper, you can either run training with the corresponding config, or you can also run the evaluation script with the corresponding checkpoint (please let me know and I can send through email) and corresponding config files (e.g. `regnerf-baseline-blender.yaml` for RegNeRF on the simulated dataset, etc.)
-
+Checkpoints for our method have been uploaded to HuggingFace and can be downloaded via:
+```
+git clone https://huggingface.co/weihan1/transientangelo_checkpoints
+```
+Again, make sure you have git-lfs downloaded.
 
 ### Making 360 degrees videos
 For the 360 degrees videos, you need a trained model and 360 degrees poses (I can send through email). Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset. Looks like this:
