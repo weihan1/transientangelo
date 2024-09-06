@@ -39,6 +39,8 @@ cd transientangelo/
 ## 🖨️ Dataset 
 The dataset is located on Huggingface at https://huggingface.co/datasets/weihan1/transientangelo_dataset/tree/main
 
+
+Before cloning the dataset, make sure that you have [git-lfs](https://git-lfs.com) installed.
 To download, use the following command:
 ```
 git clone https://huggingface.co/datasets/weihan1/transientangelo_dataset
