@@ -124,7 +124,7 @@ git clone https://huggingface.co/weihan1/transientangelo_checkpoints
 Again, make sure you have git-lfs downloaded.
 
 ### Making 360 degrees videos
-For the 360 degrees videos, you need a trained model and 360 degrees poses (i can send them to you or you can also checkout TineuVox in lib/load_dnerf.py, there's some code to generate 360 degree poses). Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset. Looks like this:
+For the 360 degrees videos, you need a trained model and 360 degrees poses (i can send them to you or you can also checkout [TineuVox](https://github.com/hustvl/TiNeuVox/blob/main/lib/load_dnerf.py) in lib/load_dnerf.py, there's some code to generate 360 degree poses). Then, simply use the evaluation command structure (with the corresponding config path) and append `dataset.name=captured-movie system.name=movie-system` for the captured dataset and `dataset.name=blender-movie system.name=movie-system` for the simulated dataset. Looks like this:
 ```
 python launch.py --config <CONFIG_PATH> --gpu <GPU_ID> --resume <CKPT_PATH> --test dataset.scene=<SCENE> dataset.num_views=<NUM_VIEWS> dataset.name=blender-movie system.name=movie-system
 ```
