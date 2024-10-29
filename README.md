@@ -1,5 +1,5 @@
 # Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar
-This repository represents the official implementation of the paper "Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar", arXiv 2024
+This repository represents the official implementation of the paper "Transientangelo: Few-Viewpoint Surface Reconstruction Using Single-Photon Lidar", WACV 2025.
 
 ![teaser](/images/teaser.png)
 
@@ -12,6 +12,8 @@ Authors:
 [![Paper](https://img.shields.io/badge/arXiv-PDF-b31b1b)](https://arxiv.org/abs/2408.12191)
 
 ## 📰 News
+2024-10-28: Paper accepted to WACV 2025.
+
 2024-09-06: Uploaded model checkpoints for reproducibility (see Usage section). 
 
 2024-08-21: Official code release.
